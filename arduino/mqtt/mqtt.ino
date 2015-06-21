@@ -40,10 +40,7 @@ void wifiCb(void* response)
 void mqttConnected(void* response)
 {
   debugPort.println("Connected");
-  mqtt.subscribe("/topic/0"); //or mqtt.subscribe("topic"); /*with qos = 0*/
-  mqtt.subscribe("/topic/1");
-  mqtt.subscribe("/topic/2");
-  mqtt.publish("/topic/0", "data0");
+  
 
 }
 void mqttDisconnected(void* response)
@@ -77,7 +74,7 @@ void setup() {
   while(!esp.ready());
 
   debugPort.println("ARDUINO: setup mqtt client");
-  if(!mqtt.begin("al_fonkisimo", "fonky", "123456", 120, 1)) {
+  if(!mqtt.begin("alfonso", "alfonsouser", "123456", 120, 1)) {
     debugPort.println("ARDUINO: fail to setup mqtt");
     while(1);
   }
@@ -105,10 +102,11 @@ void setup() {
 void loop() {
   esp.process();
   if(wifiConnected) {
-    sprintf(buf, "Hello!%d", i);
-    debugPort.println(buf);
-    mqtt.publish("fonky", buf);
-    delay (2000);
+    //sprintf(buf, "{id:\"MyThingID\", band:\"meta\", value:{first:\"Alfonso\", last:\"Galan\", iter:\"%d\"}}", i);
+    //debugPort.println(buf);
+    debugPort.println("{\"first\":\"Alfonso\", \"last\":\"Galan\"}");
+    mqtt.publish("mqtt-transport/MyThingID/meta", "{\"first\":\"Alfonso\", \"last\":\"Galan\"}");
+    delay (5000);
     i++;
   }
 }
