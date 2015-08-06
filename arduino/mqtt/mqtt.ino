@@ -93,7 +93,7 @@ void setup() {
   debugPort.println("ARDUINO: setup wifi");
   esp.wifiCb.attach(&wifiCb);
 
-  esp.wifiConnect("HELLOWORLD","FamiliaGalan123");
+  esp.wifiConnect("My_AP","raspberry");
 
 
   debugPort.println("ARDUINO: system started");
