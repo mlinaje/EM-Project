@@ -26,7 +26,7 @@ void wifiCb(void* response)
     if(status == STATION_GOT_IP) {
       debugPort.println("WIFI CONNECTED");
      // mqtt.connect("broker.mqtt-dashboard.com", 1883);
-      mqtt.connect("192.168.1.37", 1883);
+      mqtt.connect("192.168.42.1", 1883);
       wifiConnected = true;
       //or mqtt.connect("host", 1883); /*without security ssl*/
     } else {
