@@ -37,15 +37,15 @@ function newConection (port, host, keepalive) {
 
 }
 
-function updated (channel, nodeID){
+function checkStatus (channel, nodeID, callback){
 	
 	var topic = path.join(prefix, nodeID, channel);
 	
-		client.subscribe(channel, function () {
+		client.subscribe(topic, function () {
             /* maybe reset _subscribed on mqtt.open? */
 
             logger.info({
-                method: "updated",
+                method: "checkStatus",
                 info: "suscribed to:",
                 topic: topic
             });
@@ -53,7 +53,28 @@ function updated (channel, nodeID){
 
         });
 	
+		client.on('message', function (topic, message) {
+			callback (message);
+		});
+		
+		
+}
+
+function updateStatus (channel, nodeID, message){
+	var topic = path.join(prefix, nodeID, channel);
+	client.publish(topic, message, function(){
+		
+		logger.info ({
+			method: "updateStatus",
+			info: "published message",
+			message: message,
+			topic: topic
+		});
+	});
+	
+	
 }
 
 exports.newConection = newConection;
-exports.updated = updated;
+exports.checkStatus = checkStatus;
+exports.updateStatus =updateStatus;

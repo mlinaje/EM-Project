@@ -5,11 +5,12 @@ var mqtt = require('./functions')
 	
 	
 mqtt.newConection(port, host, keepalive);  
-mqtt.updated('meta', 'arduino1');
+mqtt.checkStatus('meta', 'arduino1', function (message){
+		var jsonObj = JSON.parse(message.toString());
+		console.log ("Nombre: ");
+		console.log(jsonObj.first);
+		console.log ("Apellido: ");
+		console.log(jsonObj.last);
+});
   
-/* client.subscribe('mqtt-transport/MyThingID/meta');
-client.on('message', function(topic, message) {
-  var jsonObj = JSON.parse(message.toString());
-  console.log(jsonObj.first);
-  console.log(jsonObj.last);
-}); */
+mqtt.updateStatus('meta', 'Raspberry','HelloBro');
