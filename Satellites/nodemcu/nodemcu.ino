@@ -34,7 +34,7 @@
 #define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
 #define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
 DHT dht(DHTPIN, DHTTYPE, 30); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
-char *message;
+char *status_sensors;
 
 // set up variables using the SD utility library functions:
 Sd2Card card;
@@ -50,12 +50,11 @@ File myFile;
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
-char msg[50];
+char status_aux[50];
 int value = 0;
 
 String prefix = "Home";
-String nodeID = "nodeMCU";
-String channel = "meta";
+String nodeID = "Nodo_1";
 
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
@@ -94,15 +93,7 @@ void setup_wifi() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 }
-
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-  Serial.print((char)payload[i]);
-  }
-  Serial.println();
+void writeSD (char* topic, String msg){
   myFile = SD.open("test.txt", FILE_WRITE);
    
 // if the file opened okay, write to it:
@@ -113,15 +104,32 @@ void callback(char* topic, byte* payload, unsigned int length) {
   dataString += "Message arrived [";
   dataString += topic;
   dataString += "] ";
-  for (int i = 0; i < length; i++) {
-  dataString += (char)payload[i];
-  }
+  dataString += msg;
   myFile.println(dataString);
   myFile.close();
   } else {
     // if the file didn't open, print an error:
     Serial.println("error opening test.txt");
   }
+  
+  }
+void callback(char* topic, byte* payload, unsigned int length) {
+  char* msg;
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+ //el error esta aquí
+  msg[i] = (char)payload[i];
+  }
+  Serial.println();
+  if (topic == "Home/Nodo_central/ctrl"){
+    Serial.println("estoy dentro");
+   //client.subscribe(msg);
+    }
+  else {  
+  writeSD (topic, msg);
+    }
 }
 
 void reconnect() {
@@ -131,10 +139,8 @@ void reconnect() {
     // Attempt to connect
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
       // ... and resubscribe
-      client.subscribe("Home/arduino1/istate");
+      client.subscribe("Home/Nodo_central/ctrl");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -164,8 +170,12 @@ void checkTempAndHum (){
   Serial.println(h);
   Serial.println("Temperatura: ");
   Serial.println(t);
-  snprintf (msg, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\"}", int (t), int (h));
-  message = msg;
+  long now = millis();
+  now = now/1000;
+  Serial.println("Segundos: ");
+  Serial.println(now);
+  snprintf (status_aux, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\", \"Segundos\":\"%3d\"}", int (t), int (h), now);
+  status_sensors = status_aux;
   
   }
 
@@ -176,17 +186,8 @@ void loop() {
   }
   client.loop();
 
-  long now = millis();
-  if (now - lastMsg > 2000) {
-    lastMsg = now;
-    ++value;
-   // snprintf (msg, 75, "hello world #%ld", value);
-   // Serial.print("Publish message: ");
-   // Serial.println(msg);
-   // client.publish("outTopic", msg);
-   //char *message = "{\"first\":\"Alfonso\", \"last\":\"Galan\"}";
    checkTempAndHum();
-   updateStatus (channel,nodeID,message); 
-   
-  }
+   //updateStatus ("istate",nodeID,status_sensors); 
+   delay (1000);
+ 
 }
