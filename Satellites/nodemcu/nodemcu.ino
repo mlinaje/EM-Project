@@ -114,21 +114,25 @@ void writeSD (char* topic, String msg){
   
   }
 void callback(char* topic, byte* payload, unsigned int length) {
-  char* msg;
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++) {
+  //for (int i = 0; i < length; i++) {
  //el error esta aquí
-  msg[i] = (char)payload[i];
-  }
+  //msg[i] = payload[i];
+  //}
+  payload[length] = '\0';
+  String payload_str = String((char*)payload);
+  char payload_char[payload_str.length()+1];
+  payload_str.toCharArray (payload_char, payload_str.length()+1);
+  Serial.println(payload_str);
   Serial.println();
-  if (topic == "Home/Nodo_central/ctrl"){
-    Serial.println("estoy dentro");
-   //client.subscribe(msg);
+  String topic_str(topic);
+  if (topic_str == "/Home/Nodo_central/ctrl"){
+   client.subscribe(payload_char);
     }
   else {  
-  writeSD (topic, msg);
+  writeSD (topic, payload_str);
     }
 }
 
@@ -187,7 +191,7 @@ void loop() {
   client.loop();
 
    checkTempAndHum();
-   //updateStatus ("istate",nodeID,status_sensors); 
+   updateStatus ("istate",nodeID,status_sensors); 
    delay (1000);
  
 }
