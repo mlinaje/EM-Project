@@ -25,6 +25,8 @@
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
+
 
 // include the SD library:
 #include <SPI.h>
@@ -52,7 +54,8 @@ PubSubClient client(espClient);
 long lastMsg = 0;
 char status_aux[50];
 int value = 0;
-
+float h;
+float t;
 String prefix = "Home";
 String nodeID = "Nodo_1";
 
@@ -113,26 +116,41 @@ void writeSD (char* topic, String msg){
   }
   
   }
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  //for (int i = 0; i < length; i++) {
- //el error esta aquí
-  //msg[i] = payload[i];
-  //}
+void callback(char* topic_in, byte* payload, unsigned int length) {
+  
   payload[length] = '\0';
   String payload_str = String((char*)payload);
   char payload_char[payload_str.length()+1];
   payload_str.toCharArray (payload_char, payload_str.length()+1);
-  Serial.println(payload_str);
-  Serial.println();
-  String topic_str(topic);
+  String topic_str(topic_in);
+  Serial.println(payload_char);
+  
   if (topic_str == "/Home/Nodo_central/ctrl"){
-   client.subscribe(payload_char);
+    
+      StaticJsonBuffer<200> jsonBuffer;
+      JsonObject& root = jsonBuffer.parseObject(payload_char);
+      
+      if (!root.success()) {
+        Serial.println("parseObject() failed");
+        return;
+      }
+    
+      const char* type = root["type"];
+      String type_str(type);
+      const char* topic_out = root["topic"];
+      const char* op = root["op"];
+      String op_str(op);
+          if (type_str == "mqtt"){
+              if (op_str == "sub"){
+                  client.subscribe(topic_out);
+              }
+              else {
+                  client.unsubscribe(topic_out);
+              }
+          }
     }
   else {  
-  writeSD (topic, payload_str);
+  //writeSD (topic_in, payload_str);
     }
 }
 
@@ -168,15 +186,12 @@ void updateStatus (String channel, String nodeID, char *message){
   }
 
 void checkTempAndHum (){
-  float h = dht.readHumidity(); //Se lee la humedad
-  float t = dht.readTemperature(); //Se lee la temperatura
-  Serial.println("Humedad: "); 
+  h = dht.readHumidity(); //Se lee la humedad
+  t = dht.readTemperature(); //Se lee la temperatura
   Serial.println(h);
-  Serial.println("Temperatura: ");
   Serial.println(t);
   long now = millis();
   now = now/1000;
-  Serial.println("Segundos: ");
   Serial.println(now);
   snprintf (status_aux, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\", \"Segundos\":\"%3d\"}", int (t), int (h), now);
   status_sensors = status_aux;
@@ -192,6 +207,6 @@ void loop() {
 
    checkTempAndHum();
    updateStatus ("istate",nodeID,status_sensors); 
-   delay (1000);
+   delay (3000);
  
 }
