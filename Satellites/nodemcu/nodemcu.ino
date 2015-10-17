@@ -1,28 +1,3 @@
-/*
- Basic ESP8266 MQTT example
-
- This sketch demonstrates the capabilities of the pubsub library in combination
- with the ESP8266 board/library.
-
- It connects to an MQTT server then:
-  - publishes "hello world" to the topic "outTopic" every two seconds
-  - subscribes to the topic "inTopic", printing out any messages
-    it receives. NB - it assumes the received payloads are strings not binary
-  - If the first character of the topic "inTopic" is an 1, switch ON the ESP Led,
-    else switch it off
-
- It will reconnect to the server if the connection is lost using a blocking
- reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
- achieve the same result without blocking the main loop.
-
- To install the ESP8266 board, (using Arduino 1.6.4+):
-  - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
-       http://arduino.esp8266.com/stable/package_esp8266com_index.json
-  - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
-  - Select your ESP8266 in "Tools -> Board"
-
-*/
-
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -35,7 +10,7 @@
 #include "DHT.h" //cargamos la librería DHT
 #define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
 #define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
-DHT dht(DHTPIN, DHTTYPE, 30); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
+DHT dht(DHTPIN, DHTTYPE, 20); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
 char *status_sensors;
 
 // set up variables using the SD utility library functions:
@@ -67,34 +42,21 @@ void setup() {
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   
- Serial.print("Initializing SD card...");
   if (!SD.begin(4)) {
-    Serial.println("initialization failed!");
     return;
   }
-  Serial.println("initialization done.");
- 
 }
 
 void setup_wifi() {
 
   delay(10);
   // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
 
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
   }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
 }
 void writeSD (char* topic, String msg){
   myFile = SD.open("test.txt", FILE_WRITE);
@@ -123,15 +85,13 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
   char payload_char[payload_str.length()+1];
   payload_str.toCharArray (payload_char, payload_str.length()+1);
   String topic_str(topic_in);
-  Serial.println(payload_char);
   
   if (topic_str == "/Home/Nodo_central/ctrl"){
     
       StaticJsonBuffer<200> jsonBuffer;
       JsonObject& root = jsonBuffer.parseObject(payload_char);
       
-      if (!root.success()) {
-        Serial.println("parseObject() failed");
+      if (!root.success()) {;
         return;
       }
     
@@ -157,17 +117,11 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
     // Attempt to connect
     if (client.connect("ESP8266Client")) {
-      Serial.println("connected");
       // ... and resubscribe
       client.subscribe("Home/Nodo_central/ctrl");
     } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
       delay(5000);
     }
   }
@@ -178,21 +132,15 @@ void updateStatus (String channel, String nodeID, char *message){
  char topic[topicbuff.length()+1];
  topicbuff.toCharArray (topic,topicbuff.length()+1);
   client.publish(topic, message);
-  Serial.println("Published message:");
-  Serial.print("Topic: ");
-  Serial.println(topic);
-  Serial.print("Message: ");
-  Serial.println(message);
   }
 
 void checkTempAndHum (){
   h = dht.readHumidity(); //Se lee la humedad
   t = dht.readTemperature(); //Se lee la temperatura
-  Serial.println(h);
-  Serial.println(t);
   long now = millis();
   now = now/1000;
-  Serial.println(now);
+  Serial.println(h);
+  Serial.println(t);
   snprintf (status_aux, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\", \"Segundos\":\"%3d\"}", int (t), int (h), now);
   status_sensors = status_aux;
   
@@ -206,7 +154,7 @@ void loop() {
   client.loop();
 
    checkTempAndHum();
-   updateStatus ("istate",nodeID,status_sensors); 
+   //updateStatus ("istate",nodeID,status_sensors); 
    delay (3000);
  
 }
