@@ -5,12 +5,14 @@ var mqtt = require('./functions')
 	
 	
 mqtt.newConection(port, host, keepalive);  
-mqtt.checkStatus('meta', 'arduino1', function (message){
+mqtt.checkStatus('istate', 'Nodo_1', function (message){
 		var jsonObj = JSON.parse(message.toString());
-		console.log ("Nombre: ");
-		console.log(jsonObj.first);
-		console.log ("Apellido: ");
-		console.log(jsonObj.last);
+		console.log ("Temperatura: ");
+		console.log(jsonObj.Temperature);
+		console.log ("Humedad: ");
+		console.log(jsonObj.Humidity);
+		console.log ("Segundos: ");
+		console.log(jsonObj.Segundos);
 });
   
 mqtt.updateStatus('meta', 'Raspberry','HelloBro');

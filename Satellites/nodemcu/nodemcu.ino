@@ -139,8 +139,6 @@ void checkTempAndHum (){
   t = dht.readTemperature(); //Se lee la temperatura
   long now = millis();
   now = now/1000;
-  Serial.println(h);
-  Serial.println(t);
   snprintf (status_aux, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\", \"Segundos\":\"%3d\"}", int (t), int (h), now);
   status_sensors = status_aux;
   
@@ -154,7 +152,7 @@ void loop() {
   client.loop();
 
    checkTempAndHum();
-   //updateStatus ("istate",nodeID,status_sensors); 
-   delay (3000);
+   updateStatus ("istate",nodeID,status_sensors); 
+   delay (5000);
  
 }
