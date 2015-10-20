@@ -6,7 +6,7 @@
 #include "DHT.h" //cargamos la librería DHT
 #define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
 #define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
-DHT dht(DHTPIN, DHTTYPE, 30); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
+DHT dht(DHTPIN, DHTTYPE); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
 char *status_sensors;
 
 // Update these with values suitable for your network.
@@ -101,13 +101,22 @@ void updateStatus (String channel, String nodeID, char *message){
 void checkTempAndHum (){
   h = dht.readHumidity(); //Se lee la humedad
   t = dht.readTemperature(); //Se lee la temperatura
+  float v = 5.65;
   long now = millis();
   now = now/1000;
-  Serial.println(h);
-  Serial.println(t);
-  snprintf (status_aux, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\", \"Segundos\":\"%3d\"}", int (t), int (h), now);
-  status_sensors = status_aux;
-  
+  //snprintf (status_aux, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\", \"Segundos\":\"%3d\"}", int (t), int (h), now);
+  //snprintf (status_aux, 30, "{\"Temperature\":\"%1d\"}", int (t));
+  //status_sensors = status_aux;
+  if (t > 0){
+  client.publish("topic", "mayor");
+  }
+  else{
+    if (t == 0){
+      client.publish("topic", "cero");
+      }
+      else{
+    client.publish("topic", "menor");
+    }}
   }
 
 void loop() {
@@ -118,7 +127,8 @@ void loop() {
   client.loop();
 
    checkTempAndHum();
-   updateStatus ("istate",nodeID,status_sensors); 
+   // client.publish("topic", "hola");
+   //updateStatus ("istate",nodeID,status_sensors); 
    delay (3000);
  
 }
