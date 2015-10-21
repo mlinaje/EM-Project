@@ -54,7 +54,7 @@ function checkStatus (channel, nodeID, callback){
         });
 	
 		client.on('message', function (topic, message) {
-			callback (message);
+			callback (topic, message);
 		});
 		
 		

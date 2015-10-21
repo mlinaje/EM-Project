@@ -32,7 +32,7 @@ int value = 0;
 float h;
 float t;
 String prefix = "Home";
-String nodeID = "Nodo_1";
+String nodeID = "Nodo_mcu";
 
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
@@ -121,6 +121,7 @@ void reconnect() {
     if (client.connect("ESP8266Client")) {
       // ... and resubscribe
       client.subscribe("Home/Nodo_central/ctrl");
+      client.publish("Home/Nodo_mcu/model","{\"Temp\":\"ºC\", \"Hum\":\"%\", \"Time\":\"seg.\"}");
     } else {
       delay(5000);
     }
@@ -139,7 +140,7 @@ void checkTempAndHum (){
   t = dht.readTemperature(); //Se lee la temperatura
   long now = millis();
   now = now/1000;
-  snprintf (status_aux, 75, "{\"Temperature\":\"%1d\", \"Humidity\":\"%2d\", \"Segundos\":\"%3d\"}", int (t), int (h), now);
+  snprintf (status_aux, 60, "{\"Temp\":\"%1d\", \"Hum\":\"%2d\", \"Time\":\"%3d\"}", int (t), int (h), now);
   status_sensors = status_aux;
   
   }

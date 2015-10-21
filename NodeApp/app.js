@@ -5,14 +5,26 @@ var mqtt = require('./functions')
 	
 	
 mqtt.newConection(port, host, keepalive);  
-mqtt.checkStatus('istate', 'Nodo_1', function (message){
+mqtt.checkStatus('istate', 'Nodo_mcu', function (topic, message){
 		var jsonObj = JSON.parse(message.toString());
 		console.log ("Temperatura: ");
-		console.log(jsonObj.Temperature);
+		console.log(jsonObj.Temp);
 		console.log ("Humedad: ");
-		console.log(jsonObj.Humidity);
+		console.log(jsonObj.Hum);
 		console.log ("Segundos: ");
-		console.log(jsonObj.Segundos);
+		console.log(jsonObj.Time);
 });
   
+mqtt.checkStatus('model', '+', function (topic, message){
+		var topic_str = topic.toString();
+		var jsonObj = JSON.parse(message.toString());
+		console.log ("Topic: ");
+		console.log(topic_str);
+		console.log ("Temperatura: ");
+		console.log(jsonObj.Temp);
+		console.log ("Humedad: ");
+		console.log(jsonObj.Hum);
+		console.log ("Segundos: ");
+		console.log(jsonObj.Time);
+});  
 mqtt.updateStatus('meta', 'Raspberry','HelloBro');
