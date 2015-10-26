@@ -11,7 +11,7 @@ var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
 var client;
 var topic_model = "Home/+/model";
-var jsonModel = '{"Nodos":[]}';
+var jsonModel = '{"Nodos": [] }';
 
 function newConection (port, host, keepalive) {
 		
@@ -85,22 +85,27 @@ function main (){
 
 		var nodo_obj = '{"';
 		nodo_obj = nodo_obj.concat(nodo);
-		nodo_obj = nodo_obj.concat('":[]}');
+		nodo_obj = nodo_obj.concat('":');
+		nodo_obj = nodo_obj.concat(message.toString());
+		nodo_obj = nodo_obj.concat('}');
+		console.log(nodo_obj);
 		
 		var nodo_obj_json = JSON.parse(nodo_obj);
-		nodo_obj_json[nodo].push(model);
+		console.log(nodo_obj_json["Nodo_central"]["tmp"]);
+		//nodo_obj_json[nodo].push(model);
 		nodo_obj = JSON.stringify(nodo_obj_json);
-		console.log(nodo_obj_json["nodomcu"].tmp);	
+		console.log(nodo_obj_json[nodo]);	
 		
 		var obj = JSON.parse(jsonModel);
-		obj['Nodos'].push(nodo_obj);
+		obj['Nodos'].push(JSON.parse(nodo_obj));
 		jsonModel = JSON.stringify(obj);
 		console.log(jsonModel);
-		}
-
+		jsonModel = jsonModel.replace('[','');
+		jsonModel = jsonModel.replace(']','');
+		console.log(jsonModel);
 		obj = JSON.parse(jsonModel);
-		console.log(obj.Nodos.nodomcu);
-
+		console.log(obj["Nodos"]["Nodo_central"]["tmp"]);
+		}
 	});
 	
 	
