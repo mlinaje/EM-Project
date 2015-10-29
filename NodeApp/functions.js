@@ -11,7 +11,8 @@ var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
 var client;
 var topic_model = "Home/+/model";
-var jsonModel = '{"Nodos": [] }';
+var NodosModel = [];
+var nodos = [];
 
 function newConection (port, host, keepalive) {
 		
@@ -80,31 +81,57 @@ function main (){
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
 		
 		if (channel == "model"){
-		
-		var model = JSON.parse(message.toString());
+		var nodo_obj = '';
 
-		var nodo_obj = '{"';
+		nodo_obj = '{"';
 		nodo_obj = nodo_obj.concat(nodo);
 		nodo_obj = nodo_obj.concat('":');
 		nodo_obj = nodo_obj.concat(message.toString());
 		nodo_obj = nodo_obj.concat('}');
-		console.log(nodo_obj);
 		
-		var nodo_obj_json = JSON.parse(nodo_obj);
-		console.log(nodo_obj_json["Nodo_central"]["tmp"]);
-		//nodo_obj_json[nodo].push(model);
-		nodo_obj = JSON.stringify(nodo_obj_json);
-		console.log(nodo_obj_json[nodo]);	
+
+
+		if(NodosModel.length == 0){
+			NodosModel.push(nodo_obj);
+		}
+
+		console.log(NodosModel.length);
 		
-		var obj = JSON.parse(jsonModel);
-		obj['Nodos'].push(JSON.parse(nodo_obj));
-		jsonModel = JSON.stringify(obj);
-		console.log(jsonModel);
-		jsonModel = jsonModel.replace('[','');
-		jsonModel = jsonModel.replace(']','');
-		console.log(jsonModel);
-		obj = JSON.parse(jsonModel);
-		console.log(obj["Nodos"]["Nodo_central"]["tmp"]);
+		for (var i = 0; i<NodosModel.length; i++){
+			var obj = JSON.parse(NodosModel[i]);
+			var nodo_aux = Object.keys(obj)[0];
+			nodos.push(nodo_aux);
+		}
+		console.log(nodos);
+		
+		if (nodos.indexOf(nodo) != -1){
+			console.log(nodos.indexOf(nodo));
+			NodosModel[nodos.indexOf(nodo)] = nodo_obj;
+		}else{
+			NodosModel.push(nodo_obj);			
+		}
+		
+		nodos = [];
+		console.log(NodosModel);
+		// if (obj["Nodos"][nodo] == undefined){
+			// console.log("Indefinido");
+			// jsonModel = JSON.stringify(obj);
+		// }else{
+			// console.log("Definido");
+			// }	
+		
+		//jsonModel = JSON.stringify(obj);
+		// var string_prueba = obj['Nodos'][0];
+		// console.log(string_prueba);
+		// obj['Nodos'].push(JSON.parse(nodo_obj));
+		// jsonModel = JSON.stringify(obj);
+		 // jsonModel = jsonModel.replace('[','');
+		 // jsonModel = jsonModel.replace(']','');
+		// console.log(jsonModel);
+		
+
+
+		
 		}
 	});
 	
