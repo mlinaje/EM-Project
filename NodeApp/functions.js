@@ -11,8 +11,10 @@ var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
 var client;
 var topic_model = "Home/+/model";
+var topic_meta = "Home/+/meta";
 var NodosModel = [];
-var nodos = [];
+var NodosMeta = [];
+
 
 function newConection (port, host, keepalive) {
 		
@@ -61,25 +63,35 @@ function checkStatus (channel, nodeID, callback){
 		
 }
 
-function main (){
-	
+function getModel_Meta (){
+	console.log("Entramos en la funcion getModelMeta");
 	client.subscribe(topic_model, function () {
         /* maybe reset _subscribed on mqtt.open? */
 
 		logger.info({
-			method: "checkStatus",
+			method: "getModel_Meta",
 			info: "suscribed to:",
 			topic: topic_model
 		});
 		
 	});
+		client.subscribe(topic_meta, function () {
+        /* maybe reset _subscribed on mqtt.open? */
+
+		logger.info({
+			method: "getModel_Meta",
+			info: "suscribed to:",
+			topic: topic_meta
+		});
+		
+	});
 
 	client.on('message', function (topic_aux, message) {
+		var nodos = [];
 		var topic_str = topic_aux.toString();
 		topic_aux = topic_aux.substring(1);
 		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/'));
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
-		
 		if (channel == "model"){
 		var nodo_obj = '';
 
@@ -88,56 +100,98 @@ function main (){
 		nodo_obj = nodo_obj.concat('":');
 		nodo_obj = nodo_obj.concat(message.toString());
 		nodo_obj = nodo_obj.concat('}');
-		
-
 
 		if(NodosModel.length == 0){
 			NodosModel.push(nodo_obj);
 		}
-
-		console.log(NodosModel.length);
 		
 		for (var i = 0; i<NodosModel.length; i++){
 			var obj = JSON.parse(NodosModel[i]);
 			var nodo_aux = Object.keys(obj)[0];
 			nodos.push(nodo_aux);
 		}
-		console.log(nodos);
-		
+
 		if (nodos.indexOf(nodo) != -1){
-			console.log(nodos.indexOf(nodo));
 			NodosModel[nodos.indexOf(nodo)] = nodo_obj;
 		}else{
 			NodosModel.push(nodo_obj);			
 		}
 		
 		nodos = [];
-		console.log(NodosModel);
-		// if (obj["Nodos"][nodo] == undefined){
-			// console.log("Indefinido");
-			// jsonModel = JSON.stringify(obj);
-		// }else{
-			// console.log("Definido");
-			// }	
+		}
 		
-		//jsonModel = JSON.stringify(obj);
-		// var string_prueba = obj['Nodos'][0];
-		// console.log(string_prueba);
-		// obj['Nodos'].push(JSON.parse(nodo_obj));
-		// jsonModel = JSON.stringify(obj);
-		 // jsonModel = jsonModel.replace('[','');
-		 // jsonModel = jsonModel.replace(']','');
-		// console.log(jsonModel);
-		
+		if (channel == "meta"){
+		var nodo_obj = '';
 
+		nodo_obj = '{"';
+		nodo_obj = nodo_obj.concat(nodo);
+		nodo_obj = nodo_obj.concat('":');
+		nodo_obj = nodo_obj.concat(message.toString());
+		nodo_obj = nodo_obj.concat('}');
 
+		if(NodosMeta.length == 0){
+			NodosMeta.push(nodo_obj);
+		}
 		
+		for (var i = 0; i<NodosMeta.length; i++){
+			var obj = JSON.parse(NodosMeta[i]);
+			var nodo_aux = Object.keys(obj)[0];
+			nodos.push(nodo_aux);
+		}
+
+		if (nodos.indexOf(nodo) != -1){
+			NodosMeta[nodos.indexOf(nodo)] = nodo_obj;
+		}else{
+			NodosMeta.push(nodo_obj);			
+		}
+		
+		nodos = [];
+		Nodes();
 		}
 	});
 	
 	
 
 }
+
+function Nodes (){
+	console.log("Modelo de datos: ");
+	console.log(NodosModel);
+	console.log("Metadatos: ");
+	console.log(NodosMeta);
+	console.log("-----------------------------------------------");
+	
+	
+	for (var i = 0; i<NodosMeta.length; i++){
+		var obj = JSON.parse(NodosMeta[i]);
+		var keys_nodes = Object.keys(obj);
+		for (var j = 0; j < keys_nodes.length; j++) {
+			var nodes = obj[keys_nodes[j]];
+			var keys_params = Object.keys(nodes);
+				for (var k = 0; k < keys_params.length; k++) {
+					var val = nodes[keys_params[k]];
+					var unit = searchUnit (keys_nodes[j],keys_params[k]);
+					console.log(keys_nodes[j]);
+					console.log(keys_params[k]);
+					console.log(val);
+					console.log(unit);
+					console.log("-----------------------------------------------");
+				}
+		}
+	}
+	
+};
+
+function searchUnit (nodo,param){
+	for (var i = 0; i<NodosModel.length; i++){
+		var obj = JSON.parse(NodosModel[i]);
+		if (Object.keys(obj) == nodo ){
+		var unit = obj[nodo][param];
+		}
+	}
+	
+	return unit;
+};
 
 function updateStatus (channel, nodeID, message){
 	var topic = path.join(prefix, nodeID, channel);
@@ -154,7 +208,8 @@ function updateStatus (channel, nodeID, message){
 	
 }
 
-exports.main = main;
+exports.getModel_Meta = getModel_Meta;
 exports.newConection = newConection;
 exports.checkStatus = checkStatus;
-exports.updateStatus =updateStatus;
+exports.updateStatus = updateStatus;
+exports.Nodes = Nodes;

@@ -15,6 +15,6 @@ mqtt.newConection(port, host, keepalive);
 		// console.log(jsonObj.Time);
 // });
   
-mqtt.main();
+mqtt.getModel_Meta();
 
-mqtt.updateStatus('meta', 'Raspberry','HelloBro');
+
