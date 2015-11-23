@@ -16,6 +16,14 @@ var NodosModel = [];
 var NodosMeta = [];
 
 
+var Mem = []; //array that contains the memory param for every node
+
+var Proc = []; //array that contains the process capability param for every node
+
+var Batt = []; //array that contains the battery param for every node
+
+var Lat = []; //array that contains the latency param for every node
+
 function newConection (port, host, keepalive) {
 		
 		
@@ -87,11 +95,13 @@ function getModel_Meta (){
 	});
 
 	client.on('message', function (topic_aux, message) {
+		
 		var nodos = [];
 		var topic_str = topic_aux.toString();
 		topic_aux = topic_aux.substring(1);
 		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/'));
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
+		
 		if (channel == "model"){
 		var nodo_obj = '';
 
@@ -155,13 +165,7 @@ function getModel_Meta (){
 }
 
 function Nodes (){
-	console.log("Modelo de datos: ");
-	console.log(NodosModel);
-	console.log("Metadatos: ");
-	console.log(NodosMeta);
-	console.log("-----------------------------------------------");
-	
-	
+
 	for (var i = 0; i<NodosMeta.length; i++){
 		var obj = JSON.parse(NodosMeta[i]);
 		var keys_nodes = Object.keys(obj);
@@ -176,10 +180,28 @@ function Nodes (){
 					console.log(val);
 					console.log(unit);
 					console.log("-----------------------------------------------");
+					addParam (keys_params[k], val, unit);
+					console.log("Memoria");
+					console.log(Mem);
+					console.log("Procesamiento");
+					console.log(Proc);
+					console.log("Bateria");
+					console.log(Batt);
+					console.log("Latencia");
+					console.log(Lat);
+					console.log("-----------------------------------------------");
 				}
 		}
+		
 	}
 	
+		Mem = []; 
+
+		Proc = []; 
+
+		Batt = []; 
+
+		Lat = []; 
 };
 
 function searchUnit (nodo,param){
@@ -191,6 +213,74 @@ function searchUnit (nodo,param){
 	}
 	
 	return unit;
+};
+
+function addParam (param, valu, unit){
+	switch(param)
+		{
+		case "mem":
+			switch(unit)
+			{
+			case "Gb":
+				valu = valu*1024;
+				break;
+			case "Mb":
+				//By default the unit for the memory is Mb
+				break;
+			case "Kb":
+				valu = valu/1024;
+				break;
+			default:
+				console.log("Erro to convert the memory param")
+			}
+			
+			Mem.push(valu);
+			
+		  break;
+		case "proc":
+
+			Proc.push(valu);
+			
+		  break;
+		case "batt":
+		  switch(unit)
+			{
+			case "V":
+				valu = valu*1000;
+				break;
+			case "mV":
+				//By default the unit for the battery is mV
+				break;
+			case "uV":
+				valu = valu/1000;
+				break;
+			default:
+				console.log("Erro to convert the memory param")
+			}
+			
+			Batt.push(valu);
+			
+		  break;
+		case "lat":
+		switch(unit)
+			{
+		  case "seg":
+				//By default the unit for the battery is mV
+				break;
+			case "mseg":
+				valu = valu/1000;
+				break;
+			default:
+				console.log("Erro to convert the latency param")
+			}
+		  Lat.push(valu);
+		  
+		  break;
+		default:
+		  console.log("Erro to add the param")
+		}
+			
+	
 };
 
 function updateStatus (channel, nodeID, message){
