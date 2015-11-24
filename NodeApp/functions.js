@@ -6,7 +6,6 @@ var path = require('path');
 var bunyan = require('bunyan');
 
 
-
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
 var client;
@@ -175,25 +174,23 @@ function Nodes (){
 				for (var k = 0; k < keys_params.length; k++) {
 					var val = nodes[keys_params[k]];
 					var unit = searchUnit (keys_nodes[j],keys_params[k]);
-					console.log(keys_nodes[j]);
-					console.log(keys_params[k]);
-					console.log(val);
-					console.log(unit);
-					console.log("-----------------------------------------------");
 					addParam (keys_params[k], val, unit);
-					console.log("Memoria");
-					console.log(Mem);
-					console.log("Procesamiento");
-					console.log(Proc);
-					console.log("Bateria");
-					console.log(Batt);
-					console.log("Latencia");
-					console.log(Lat);
-					console.log("-----------------------------------------------");
+					
 				}
 		}
 		
 	}
+		console.log("Memoria");
+		console.log(Mem);
+		console.log("Procesamiento");
+		console.log(Proc);
+		console.log("Bateria");
+		console.log(Batt);
+		console.log("Latencia");
+		console.log(Lat);
+		console.log("-----------------------------------------------");
+	
+		getNodes (0.2, 0.35, 0.25, 0.2, 2)
 	
 		Mem = []; 
 
@@ -225,7 +222,7 @@ function addParam (param, valu, unit){
 				valu = valu*1024;
 				break;
 			case "Mb":
-				//By default the unit for the memory is Mb
+				valu = parseFloat (valu); //By default the unit for the memory is Mb
 				break;
 			case "Kb":
 				valu = valu/1024;
@@ -238,26 +235,14 @@ function addParam (param, valu, unit){
 			
 		  break;
 		case "proc":
-
+		
+			valu = parseFloat (valu);
 			Proc.push(valu);
 			
 		  break;
 		case "batt":
-		  switch(unit)
-			{
-			case "V":
-				valu = valu*1000;
-				break;
-			case "mV":
-				//By default the unit for the battery is mV
-				break;
-			case "uV":
-				valu = valu/1000;
-				break;
-			default:
-				console.log("Erro to convert the memory param")
-			}
-			
+		
+			valu = parseFloat (valu);
 			Batt.push(valu);
 			
 		  break;
@@ -265,7 +250,7 @@ function addParam (param, valu, unit){
 		switch(unit)
 			{
 		  case "seg":
-				//By default the unit for the battery is mV
+				valu = parseFloat (valu); 
 				break;
 			case "mseg":
 				valu = valu/1000;
@@ -281,6 +266,34 @@ function addParam (param, valu, unit){
 		}
 			
 	
+};
+
+
+function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
+	var aux =[];
+	var result = [];
+	
+	for(var i = 0; i < Mem.length; i++){
+		aux[i] = (Mem[i]/Math.max.apply(null,Mem))*weightMem;
+		result [i] = 0 + aux[i];
+	}
+	
+	for(var i = 0; i < Proc.length; i++){
+		aux[i] = (Proc[i]/Math.max.apply(null,Proc))*weigthProc;	
+		result [i] = result [i] + aux[i];
+	}
+	for(var i = 0; i < Batt.length; i++){
+		aux[i] = (Batt[i]/Math.max.apply(null,Batt))*weigthBatt;
+		result [i] = result [i] + aux[i];		
+	}
+	for(var i = 0; i < Lat.length; i++){
+		aux[i] = (Lat[i]/Math.max.apply(null,Lat))*weigthLat;
+		result [i] = result [i] + aux[i];
+	}
+	
+	console.log(result);
+	console.log(result.indexOf(Math.max.apply(null,result)));
+	return (result.indexOf(Math.max.apply(null,result)));
 };
 
 function updateStatus (channel, nodeID, message){
