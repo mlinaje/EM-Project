@@ -14,7 +14,6 @@ var topic_meta = "Home/+/meta";
 var NodosModel = [];
 var NodosMeta = [];
 
-
 var Mem = []; //array that contains the memory param for every node
 
 var Proc = []; //array that contains the process capability param for every node
@@ -71,7 +70,6 @@ function checkStatus (channel, nodeID, callback){
 }
 
 function getModel_Meta (){
-	console.log("Entramos en la funcion getModelMeta");
 	client.subscribe(topic_model, function () {
         /* maybe reset _subscribed on mqtt.open? */
 
@@ -125,7 +123,7 @@ function getModel_Meta (){
 		}else{
 			NodosModel.push(nodo_obj);			
 		}
-		
+
 		nodos = [];
 		}
 		
@@ -153,7 +151,7 @@ function getModel_Meta (){
 		}else{
 			NodosMeta.push(nodo_obj);			
 		}
-		
+				
 		nodos = [];
 		Nodes();
 		}
@@ -180,24 +178,12 @@ function Nodes (){
 		}
 		
 	}
-		console.log("Memoria");
-		console.log(Mem);
-		console.log("Procesamiento");
-		console.log(Proc);
-		console.log("Bateria");
-		console.log(Batt);
-		console.log("Latencia");
-		console.log(Lat);
-		console.log("-----------------------------------------------");
 	
-		getNodes (0.2, 0.35, 0.25, 0.2, 2)
-	
+		getNodes (0.2, 0.35, 0.25, 0.2, 2);	
+		
 		Mem = []; 
-
 		Proc = []; 
-
 		Batt = []; 
-
 		Lat = []; 
 };
 
@@ -288,11 +274,13 @@ function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
 	}
 	for(var i = 0; i < Lat.length; i++){
 		aux[i] = (Lat[i]/Math.max.apply(null,Lat))*weigthLat;
-		result [i] = result [i] + aux[i];
+		result [i] = result [i] - aux[i];
 	}
 	
-	console.log(result);
-	console.log(result.indexOf(Math.max.apply(null,result)));
+
+		var obj = JSON.parse(NodosModel[result.indexOf(Math.max.apply(null,result))]);	
+		client.publish("/Home/nodo_central/ctrl", Object.keys(obj)[0]);
+		
 	return (result.indexOf(Math.max.apply(null,result)));
 };
 

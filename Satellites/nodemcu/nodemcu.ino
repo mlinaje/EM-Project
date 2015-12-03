@@ -7,10 +7,10 @@
 #include <SPI.h>
 #include <SD.h>
 
-#include "DHT.h" //cargamos la librería DHT
-#define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
-#define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
-DHT dht(DHTPIN, DHTTYPE, 20); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
+#include "DHT.h" //cargamos la librería DHT
+#define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
+#define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
+DHT dht(DHTPIN, DHTTYPE, 20); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
 char *status_sensors;
 
 // set up variables using the SD utility library functions:
@@ -65,7 +65,7 @@ void writeSD (char* topic, String msg){
   if (myFile) {
   // make a string for assembling the data to log:
   String dataString = "";
-  Serial.println("Writting in SD...");
+  Serial.println(F("Writting in SD..."));
   dataString += "Message arrived [";
   dataString += topic;
   dataString += "] ";
@@ -73,8 +73,7 @@ void writeSD (char* topic, String msg){
   myFile.println(dataString);
   myFile.close();
   } else {
-    // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
+    Serial.println(F("error opening the file"));
   }
   
   }

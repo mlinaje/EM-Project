@@ -5,11 +5,10 @@
 #include <SPI.h>
 #include <SD.h>
 
-#include "DHT.h" //cargamos la librería DHT
-#define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
-#define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
-DHT dht(DHTPIN, DHTTYPE); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
-char *status_sensors;
+#include "DHT.h" //cargamos la librería DHT
+#define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
+#define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
+DHT dht(DHTPIN, DHTTYPE); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
 
 // set up variables using the SD utility library functions:
 Sd2Card card;
@@ -19,7 +18,7 @@ SdFile root;
 // Update these with values suitable for your network.
 
 // Update these with values suitable for your network.
-byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xED };
+byte mac[] = { 0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xED };
 IPAddress ip(192, 168, 1, 100);
 IPAddress server(192, 168, 1, 3);
 
@@ -34,6 +33,8 @@ float h;
 float t;
 String prefix = "Home";
 String nodeID = "Nodo_1";
+int sensorPin = A0;  
+float sensorValue = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -56,17 +57,17 @@ void writeSD (char* topic, String msg){
 // if the file opened okay, write to it:
   if (myFile) {
   // make a string for assembling the data to log:
-  String dataString = "";
-  Serial.println("Writting in SD...");
-  dataString += "Message arrived [";
-  dataString += topic;
-  dataString += "] ";
-  dataString += msg;
-  myFile.println(dataString);
+//  String dataString = "";
+//  Serial.println(F("Writting in SD..."));
+//  dataString += "Message arrived [";
+//  dataString += topic;
+//  dataString += "] ";
+//  dataString += msg;
+  myFile.println(msg);
   myFile.close();
   } else {
     // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
+    //Serial.println(F("error opening test.txt"));
   }
   
   }
@@ -82,7 +83,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
 
   
   if (topic_str == "/Home/Nodo_central/ctrl"){
-      Serial.println ("dentro del if");
+      Serial.println (F("dentro del if"));
 //      StaticJsonBuffer<200> jsonBuffer;
 //      JsonObject& root = jsonBuffer.parseObject(payload_char);
 //      
@@ -122,22 +123,14 @@ void reconnect() {
   }
 }
 
-//void updateStatus (String channel, String nodeID, char *message){
-// String topicbuff = prefix +"/"+ nodeID +"/"+ channel;
-// char topic[topicbuff.length()+1];
-// topicbuff.toCharArray (topic,topicbuff.length()+1);
-//  client.publish(topic, message);
-//  }
-
 void checkTempAndHum (){
   h = dht.readHumidity(); //Se lee la humedad
   t = dht.readTemperature(); //Se lee la temperatura
   long now = millis();
   now = now/1000;
-  snprintf (status_aux, 52, "{\"Temp\":\"%1d\", \"Hum\":\"%2d\", \"Seg\":\"%3d\"}", int (t), int (h), now);
-
-  status_sensors = status_aux;
-  
+  sensorValue = ((analogRead(sensorPin)*5)/1023.0);
+  sensorValue = (sensorValue*5)/1023.0;
+  snprintf (status_aux, 52, "{\"Temp\":\"%1d\", \"Hum\":\"%2d\", \"Seg\":\"%3d\"}", 76.98 , int (h), now);
   }
 
 void loop() {
@@ -147,8 +140,8 @@ void loop() {
   }
   client.loop();
 
-   //checkTempAndHum();
-   //updateStatus ("istate",nodeID,status_sensors); 
+   checkTempAndHum();
+   client.publish("Home/Nodo_1/istate", status_aux);
    delay (3000);
  
 }
