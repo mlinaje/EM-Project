@@ -12,7 +12,9 @@ var client;
 var topic_model = "Home/+/model";
 var topic_meta = "Home/+/meta";
 var NodosModel = [];
+var Nodos_gl = [];
 var NodosMeta = [];
+var currentStgNodes = [];
 
 var Mem = []; //array that contains the memory param for every node
 
@@ -121,9 +123,8 @@ function getModel_Meta (){
 		if (nodos.indexOf(nodo) != -1){
 			NodosModel[nodos.indexOf(nodo)] = nodo_obj;
 		}else{
-			NodosModel.push(nodo_obj);			
+			NodosModel.push(nodo_obj);
 		}
-
 		nodos = [];
 		}
 		
@@ -277,11 +278,39 @@ function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
 		result [i] = result [i] - aux[i];
 	}
 	
-
-		var obj = JSON.parse(NodosModel[result.indexOf(Math.max.apply(null,result))]);	
-		client.publish("/Home/nodo_central/ctrl", Object.keys(obj)[0]);
+		for (var i = 0; i<NodosModel.length; i++){
+			var obj = JSON.parse(NodosModel[i]);
+			var nodo_aux = Object.keys(obj)[0];
+			Nodos_gl.push(nodo_aux);
+		}
 		
-	return (result.indexOf(Math.max.apply(null,result)));
+	var nextStgNodes = [];
+	console.log("#############");
+	console.log(numberNodes);
+	console.log(result.length);
+	console.log("#############");
+	var resultLength = result.length;
+	if (numberNodes <= result.length){
+		console.log("if");
+		for (var i = 0; i < numberNodes; i++){
+			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]);
+			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1);
+			result.splice(result.indexOf(Math.max.apply(null,result)), 1);
+		}
+	}
+	else {
+		console.log("else");
+		for (var i = 0; i < resultLength; i++){
+			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]);
+			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1);
+			result.splice(result.indexOf(Math.max.apply(null,result)), 1);
+		}
+	}
+	
+	console.log (nextStgNodes);	
+
+	Nodos_gl = [];
+	nextStgNodes = [];	
 };
 
 function updateStatus (channel, nodeID, message){
