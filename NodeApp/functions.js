@@ -285,13 +285,8 @@ function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
 		}
 		
 	var nextStgNodes = [];
-	console.log("#############");
-	console.log(numberNodes);
-	console.log(result.length);
-	console.log("#############");
 	var resultLength = result.length;
 	if (numberNodes <= result.length){
-		console.log("if");
 		for (var i = 0; i < numberNodes; i++){
 			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]);
 			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1);
@@ -299,7 +294,6 @@ function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
 		}
 	}
 	else {
-		console.log("else");
 		for (var i = 0; i < resultLength; i++){
 			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]);
 			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1);
@@ -307,11 +301,56 @@ function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
 		}
 	}
 	
-	console.log (nextStgNodes);	
 
+	updateStgNodes(nextStgNodes);
+	
 	Nodos_gl = [];
 	nextStgNodes = [];	
 };
+
+
+function updateStgNodes (nextStgNodes){
+
+	for(var i = 0; i < nextStgNodes.length; i++){
+		if(currentStgNodes.indexOf(nextStgNodes[i]) == -1){
+			currentStgNodes.push(nextStgNodes[i]);
+			
+			var msg = '{"';
+			msg = msg.concat(nextStgNodes[i]);
+			msg = msg.concat('": "subs" }');
+			
+			client.publish("/Home/nodo_central/ctrl", msg, function(){
+		
+				logger.info ({
+					method: "updateStgNodes_subs",
+					info: "published message",
+
+				});
+			});
+		}
+	}
+	
+
+	for(var i = 0; i < currentStgNodes.length; i++){		
+		if(nextStgNodes.indexOf(currentStgNodes[i]) == -1){
+			var msg = '{"';
+			msg = msg.concat(currentStgNodes[i]);
+			msg = msg.concat('": "unsubs" }');
+			
+			client.publish("/Home/nodo_central/ctrl", msg, function(){
+		
+				logger.info ({
+					method: "updateStgNodes_unsubs",
+					info: "published message",
+
+				});
+			});
+			currentStgNodes.splice(i,1);
+		}
+	}
+
+	
+}
 
 function updateStatus (channel, nodeID, message){
 	var topic = path.join(prefix, nodeID, channel);
