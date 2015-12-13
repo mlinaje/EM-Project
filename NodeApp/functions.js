@@ -180,7 +180,7 @@ function Nodes (){
 		
 	}
 	
-		getNodes (0.2, 0.35, 0.25, 0.2, 2);	
+		getNodes (0.4, 0.25, 0.15, 0.2, 2);	
 		
 		Mem = []; 
 		Proc = []; 
@@ -315,9 +315,9 @@ function updateStgNodes (nextStgNodes){
 		if(currentStgNodes.indexOf(nextStgNodes[i]) == -1){
 			currentStgNodes.push(nextStgNodes[i]);
 			
-			var msg = '{"';
+			var msg = '{"nodo" : "';
 			msg = msg.concat(nextStgNodes[i]);
-			msg = msg.concat('": "subs" }');
+			msg = msg.concat('", "op" : "subs" }');
 			
 			client.publish("/Home/nodo_central/ctrl", msg, function(){
 		
@@ -333,9 +333,10 @@ function updateStgNodes (nextStgNodes){
 
 	for(var i = 0; i < currentStgNodes.length; i++){		
 		if(nextStgNodes.indexOf(currentStgNodes[i]) == -1){
-			var msg = '{"';
-			msg = msg.concat(currentStgNodes[i]);
-			msg = msg.concat('": "unsubs" }');
+			
+			var msg = '{"nodo" : "';
+			msg = msg.concat(nextStgNodes[i]);
+			msg = msg.concat('", "op" : "unsubs" }');
 			
 			client.publish("/Home/nodo_central/ctrl", msg, function(){
 		

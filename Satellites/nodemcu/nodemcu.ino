@@ -32,7 +32,7 @@ int value = 0;
 float h;
 float t;
 String prefix = "Home";
-String nodeID = "Nodo_mcu";
+String nodeID = "nodo_mcu_1";
 
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
@@ -85,7 +85,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
   payload_str.toCharArray (payload_char, payload_str.length()+1);
   String topic_str(topic_in);
   
-  if (topic_str == "/Home/Nodo_central/ctrl"){
+  if (topic_str == "/Home/nodo_central/ctrl"){
     
       StaticJsonBuffer<200> jsonBuffer;
       JsonObject& root = jsonBuffer.parseObject(payload_char);
@@ -94,17 +94,18 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
         return;
       }
     
-      const char* type = root["type"];
-      String type_str(type);
-      const char* topic_out = root["topic"];
+      const char* nodo = root["nodo"];
+      String nodo_str(nodo);
       const char* op = root["op"];
       String op_str(op);
-          if (type_str == "mqtt"){
+          if (nodo_str == "nodo_mcu_1"){
               if (op_str == "sub"){
-                  client.subscribe(topic_out);
+                  client.subscribe("Home/storage");
               }
               else {
-                  client.unsubscribe(topic_out);
+                if (op_str == "unsub"){
+                  client.unsubscribe("Home/storage");
+                }                 
               }
           }
     }
@@ -119,8 +120,8 @@ void reconnect() {
     // Attempt to connect
     if (client.connect("ESP8266Client")) {
       // ... and resubscribe
-      client.subscribe("Home/Nodo_central/ctrl");
-      client.publish("Home/Nodo_mcu/model","{\"Temp\":\"ºC\", \"Hum\":\"%\", \"Time\":\"seg.\"}");
+      client.subscribe("Home/nodo_central/ctrl");
+      client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");
     } else {
       delay(5000);
     }
@@ -152,7 +153,8 @@ void loop() {
   client.loop();
 
    checkTempAndHum();
-   updateStatus ("istate",nodeID,status_sensors); 
+   updateStatus ("istate",nodeID,status_sensors);
+   updateStatus ("meta",nodeID,"{\"mem\":\"3\",\"proc\":\"1500\",\"batt\":\"80\",\"lat\":\"0.5\"}");
    delay (5000);
  
 }
