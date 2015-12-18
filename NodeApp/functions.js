@@ -15,6 +15,7 @@ var NodosModel = [];
 var Nodos_gl = [];
 var NodosMeta = [];
 var currentStgNodes = [];
+var requests = [];
 
 var Mem = []; //array that contains the memory param for every node
 
@@ -155,6 +156,11 @@ function getModel_Meta (){
 				
 		nodos = [];
 		Nodes();
+		}
+		
+		if (channel == "reply"){
+			
+	
 		}
 	});
 	
@@ -368,7 +374,67 @@ function updateStatus (channel, nodeID, message){
 	
 }
 
+function request_daemon (){
+
+	var interval = setInterval(function() {
+		for (var i = 0; i<NodosMeta.length; i++){
+			var obj = JSON.parse(NodosMeta[i]);
+			var keys_nodes = Object.keys(obj);
+
+			
+			var topic = 'Home/';
+			topic = topic.concat(keys_nodes[0]);
+			topic = topic.concat('/reply');			
+			client.subscribe(topic);
+
+			//crear el json con la hora, el nodo y el token y meterlo en el array
+			var token = getRandomInt(100,1000);	
+			var now = new Date();
+			var milis = now.getTime();
+			
+			var json_req = '{"nodo" : "';
+			json_req = json_req.concat(keys_nodes[0]);
+			json_req = json_req.concat('", "token" : "');
+			json_req = json_req.concat(token);
+			json_req = json_req.concat('", "time" : "');
+			json_req = json_req.concat(milis);
+			json_req = json_req.concat('"}');
+			requests.push(json_req);
+			console.log(requests);
+			topic = 'Home/';
+			topic = topic.concat(keys_nodes[0]);
+			topic = topic.concat('/request');
+			
+			client.publish(topic, token.toString());
+		}
+	}, 5000);
+		
+
+
+}
+
+function clean_daemon(){
+	var interval = setInterval(function() {
+		for (var i = 0; i<requests.length; i++){
+			var obj = JSON.parse(requests[i]);
+			var time = obj.time;
+			var now = new Date();
+			var milis = now.getTime();
+			var dif = milis - time;
+			if (dif > 3000){
+				requests.splice(i,1);
+			}
+		}
+	}, 2000);
+}
+
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+
+exports.clean_daemon = clean_daemon;
 exports.getModel_Meta = getModel_Meta;
+exports.request_daemon = request_daemon;
 exports.newConection = newConection;
 exports.checkStatus = checkStatus;
 exports.updateStatus = updateStatus;

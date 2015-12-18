@@ -28,6 +28,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
 char status_aux[50];
+char json_ip[30];
 int value = 0;
 float h;
 float t;
@@ -109,8 +110,15 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
               }
           }
     }
+  if (topic_str == "Home/nodo_mcu_1/request"){
+      client.publish("Home/nodo_mcu_1/reply","");  
+  }
+
+  if (topic_str == "Home/nodo_mcu_1/model"){
+      client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");  
+  }
   else {  
-  //writeSD (topic_in, payload_str);
+  //write
     }
 }
 
@@ -121,6 +129,7 @@ void reconnect() {
     if (client.connect("ESP8266Client")) {
       // ... and resubscribe
       client.subscribe("Home/nodo_central/ctrl");
+      client.subscribe("Home/nodo_mcu_1/request");
       client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");
     } else {
       delay(5000);
