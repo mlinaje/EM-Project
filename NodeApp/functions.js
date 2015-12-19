@@ -11,6 +11,7 @@ var prefix = 'Home';
 var client;
 var topic_model = "Home/+/model";
 var topic_meta = "Home/+/meta";
+var topic_reply = "Home/+/reply";
 var NodosModel = [];
 var Nodos_gl = [];
 var NodosMeta = [];
@@ -53,17 +54,8 @@ function checkStatus (channel, nodeID, callback){
 	
 	var topic = path.join(prefix, nodeID, channel);
 	
-		client.subscribe(topic, function () {
-            /* maybe reset _subscribed on mqtt.open? */
+		client.subscribe(topic);
 
-            logger.info({
-                method: "checkStatus",
-                info: "suscribed to:",
-                topic: topic
-            });
-
-
-        });
 	
 		client.on('message', function (topic, message) {
 			callback (topic, message);
@@ -73,27 +65,10 @@ function checkStatus (channel, nodeID, callback){
 }
 
 function getModel_Meta (){
-	client.subscribe(topic_model, function () {
-        /* maybe reset _subscribed on mqtt.open? */
-
-		logger.info({
-			method: "getModel_Meta",
-			info: "suscribed to:",
-			topic: topic_model
-		});
-		
-	});
-		client.subscribe(topic_meta, function () {
-        /* maybe reset _subscribed on mqtt.open? */
-
-		logger.info({
-			method: "getModel_Meta",
-			info: "suscribed to:",
-			topic: topic_meta
-		});
-		
-	});
-
+	client.subscribe(topic_model);
+	client.subscribe(topic_meta);
+	client.subscribe(topic_reply);
+	
 	client.on('message', function (topic_aux, message) {
 		
 		var nodos = [];
@@ -103,64 +78,88 @@ function getModel_Meta (){
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
 		
 		if (channel == "model"){
-		var nodo_obj = '';
+					
+			var nodo_obj = '';
+			nodo_obj = '{"';
+			nodo_obj = nodo_obj.concat(nodo);
+			nodo_obj = nodo_obj.concat('":');
+			nodo_obj = nodo_obj.concat(message.toString());
+			nodo_obj = nodo_obj.concat('}');
 
-		nodo_obj = '{"';
-		nodo_obj = nodo_obj.concat(nodo);
-		nodo_obj = nodo_obj.concat('":');
-		nodo_obj = nodo_obj.concat(message.toString());
-		nodo_obj = nodo_obj.concat('}');
+			if(NodosModel.length == 0){
+				NodosModel.push(nodo_obj);
+			}
+			
+			for (var i = 0; i<NodosModel.length; i++){
+				var obj = JSON.parse(NodosModel[i]);
+				var nodo_aux = Object.keys(obj)[0];
+				nodos.push(nodo_aux);
+			}
 
-		if(NodosModel.length == 0){
-			NodosModel.push(nodo_obj);
-		}
-		
-		for (var i = 0; i<NodosModel.length; i++){
-			var obj = JSON.parse(NodosModel[i]);
-			var nodo_aux = Object.keys(obj)[0];
-			nodos.push(nodo_aux);
-		}
-
-		if (nodos.indexOf(nodo) != -1){
-			NodosModel[nodos.indexOf(nodo)] = nodo_obj;
-		}else{
-			NodosModel.push(nodo_obj);
-		}
-		nodos = [];
+			if (nodos.indexOf(nodo) != -1){
+				NodosModel[nodos.indexOf(nodo)] = nodo_obj;
+			}else{
+				NodosModel.push(nodo_obj);
+			}
+			nodos = [];
 		}
 		
 		if (channel == "meta"){
-		var nodo_obj = '';
+			
+			for (var i = 0; i<NodosModel.length; i++){
+				var obj = JSON.parse(NodosModel[i]);
+				var nodo_aux = Object.keys(obj)[0];
+				nodos.push(nodo_aux);
+			}	
+			if (nodos.indexOf(nodo) == -1){
+				var topic = 'Home/';
+				topic = topic.concat(nodo);
+				topic = topic.concat('/model_req');	
+				client.publish(topic, "req");
+			}
+			var nodo_obj = '';
+			nodo_obj = '{"';
+			nodo_obj = nodo_obj.concat(nodo);
+			nodo_obj = nodo_obj.concat('":');
+			nodo_obj = nodo_obj.concat(message.toString());
+			nodo_obj = nodo_obj.concat('}');
 
-		nodo_obj = '{"';
-		nodo_obj = nodo_obj.concat(nodo);
-		nodo_obj = nodo_obj.concat('":');
-		nodo_obj = nodo_obj.concat(message.toString());
-		nodo_obj = nodo_obj.concat('}');
+			if(NodosMeta.length == 0){
+				NodosMeta.push(nodo_obj);
+			}
+			
+			for (var i = 0; i<NodosMeta.length; i++){
+				var obj = JSON.parse(NodosMeta[i]);
+				var nodo_aux = Object.keys(obj)[0];
+				nodos.push(nodo_aux);
+			}
 
-		if(NodosMeta.length == 0){
-			NodosMeta.push(nodo_obj);
-		}
-		
-		for (var i = 0; i<NodosMeta.length; i++){
-			var obj = JSON.parse(NodosMeta[i]);
-			var nodo_aux = Object.keys(obj)[0];
-			nodos.push(nodo_aux);
-		}
-
-		if (nodos.indexOf(nodo) != -1){
-			NodosMeta[nodos.indexOf(nodo)] = nodo_obj;
-		}else{
-			NodosMeta.push(nodo_obj);			
-		}
-				
-		nodos = [];
-		Nodes();
+			if (nodos.indexOf(nodo) != -1){
+				NodosMeta[nodos.indexOf(nodo)] = nodo_obj;
+			}else{
+				NodosMeta.push(nodo_obj);			
+			}
+			
+			nodos = [];
+			Nodes();
 		}
 		
 		if (channel == "reply"){
-			
-	
+			var token_aux = message.toString();
+			for (var i = 0; i<requests.length; i++){
+				var obj = JSON.parse(requests[i]);
+				var token = obj.token;
+				
+				if (token_aux == token){
+					var time = obj.time;
+					var nodo = obj.nodo;
+					var now = new Date();
+					var milis = now.getTime();
+					var dif = milis - time;
+					//add the dif param to meta array
+					requests.splice(i,1);
+				}
+			}
 		}
 	});
 	
@@ -325,14 +324,7 @@ function updateStgNodes (nextStgNodes){
 			msg = msg.concat(nextStgNodes[i]);
 			msg = msg.concat('", "op" : "subs" }');
 			
-			client.publish("/Home/nodo_central/ctrl", msg, function(){
-		
-				logger.info ({
-					method: "updateStgNodes_subs",
-					info: "published message",
-
-				});
-			});
+			client.publish("/Home/nodo_central/ctrl", msg);
 		}
 	}
 	
@@ -344,14 +336,7 @@ function updateStgNodes (nextStgNodes){
 			msg = msg.concat(nextStgNodes[i]);
 			msg = msg.concat('", "op" : "unsubs" }');
 			
-			client.publish("/Home/nodo_central/ctrl", msg, function(){
-		
-				logger.info ({
-					method: "updateStgNodes_unsubs",
-					info: "published message",
-
-				});
-			});
+			client.publish("/Home/nodo_central/ctrl", msg);
 			currentStgNodes.splice(i,1);
 		}
 	}
@@ -361,15 +346,7 @@ function updateStgNodes (nextStgNodes){
 
 function updateStatus (channel, nodeID, message){
 	var topic = path.join(prefix, nodeID, channel);
-	client.publish(topic, message, function(){
-		
-		logger.info ({
-			method: "updateStatus",
-			info: "published message",
-			message: message,
-			topic: topic
-		});
-	});
+	client.publish(topic, message);
 	
 	
 }
@@ -400,11 +377,9 @@ function request_daemon (){
 			json_req = json_req.concat(milis);
 			json_req = json_req.concat('"}');
 			requests.push(json_req);
-			console.log(requests);
 			topic = 'Home/';
 			topic = topic.concat(keys_nodes[0]);
 			topic = topic.concat('/request');
-			
 			client.publish(topic, token.toString());
 		}
 	}, 5000);
@@ -418,14 +393,23 @@ function clean_daemon(){
 		for (var i = 0; i<requests.length; i++){
 			var obj = JSON.parse(requests[i]);
 			var time = obj.time;
+			var nodo = obj.nodo;
 			var now = new Date();
 			var milis = now.getTime();
 			var dif = milis - time;
-			if (dif > 3000){
+			if (dif > 10000){
+				
+				for (var j = 0; j<NodosMeta.length; j++){
+					var obj_meta = JSON.parse(NodosMeta[i]);
+					var keys_nodes = Object.keys(obj_meta);
+					if (nodo == keys_nodes[0]){					
+						NodosMeta.splice(i,1);
+					}
+				}
 				requests.splice(i,1);
 			}
 		}
-	}, 2000);
+	}, 10000);
 }
 
 function getRandomInt(min, max) {

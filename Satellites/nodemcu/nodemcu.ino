@@ -111,14 +111,13 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
           }
     }
   if (topic_str == "Home/nodo_mcu_1/request"){
-      client.publish("Home/nodo_mcu_1/reply","");  
+     client.publish("Home/nodo_mcu_1/reply",payload_char); 
   }
-
-  if (topic_str == "Home/nodo_mcu_1/model"){
-      client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");  
-  }
-  else {  
-  //write
+  if (topic_str == "Home/nodo_mcu_1/model_req"){
+     client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");  
+  }    
+  else { 
+  //do something
     }
 }
 
@@ -130,6 +129,7 @@ void reconnect() {
       // ... and resubscribe
       client.subscribe("Home/nodo_central/ctrl");
       client.subscribe("Home/nodo_mcu_1/request");
+      client.subscribe("Home/nodo_mcu_1/model_req");
       client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");
     } else {
       delay(5000);
