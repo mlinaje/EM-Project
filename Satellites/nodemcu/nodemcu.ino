@@ -11,7 +11,7 @@
 #define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
 #define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
 DHT dht(DHTPIN, DHTTYPE, 20); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
-char *status_sensors;
+
 
 // set up variables using the SD utility library functions:
 Sd2Card card;
@@ -28,12 +28,19 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
 char status_aux[50];
+char *status_sensors;
+char meta_aux[50];
+char *status_meta;
 char json_ip[30];
 int value = 0;
 float h;
 float t;
 String prefix = "Home";
 String nodeID = "nodo_mcu_1";
+int capacity = 7753728;
+int busy = 0;
+File root_2;
+int freeSpace = 0;
 
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
@@ -46,6 +53,7 @@ void setup() {
   if (!SD.begin(4)) {
     return;
   }
+   root_2 = SD.open("/");
 }
 
 void setup_wifi() {
@@ -114,7 +122,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
      client.publish("Home/nodo_mcu_1/reply",payload_char); 
   }
   if (topic_str == "Home/nodo_mcu_1/model_req"){
-     client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");  
+     client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\"}");  
   }    
   else { 
   //do something
@@ -130,7 +138,7 @@ void reconnect() {
       client.subscribe("Home/nodo_central/ctrl");
       client.subscribe("Home/nodo_mcu_1/request");
       client.subscribe("Home/nodo_mcu_1/model_req");
-      client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\",\"lat\":\"seg\"}");
+      client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Kb\",\"proc\":\"noUnit\",\"batt\":\"%\"}");
     } else {
       delay(5000);
     }
@@ -143,27 +151,46 @@ void updateStatus (String channel, String nodeID, char *message){
  topicbuff.toCharArray (topic,topicbuff.length()+1);
   client.publish(topic, message);
   }
+int getFreeSpace(File dir, int numTabs) {
+   while(true) {
+     
+     File entry =  dir.openNextFile();
+     if (! entry) {
+       // no more files
+      busy = 0;
+      return freeSpace;
+       break;
+     }
+      busy = busy + entry.size();
+    freeSpace = capacity-(busy/1024);
 
+}
+}
 void checkTempAndHum (){
   h = dht.readHumidity(); //Se lee la humedad
   t = dht.readTemperature(); //Se lee la temperatura
   long now = millis();
   now = now/1000;
-  snprintf (status_aux, 60, "{\"Temp\":\"%1d\", \"Hum\":\"%2d\", \"Time\":\"%3d\"}", int (t), int (h), now);
+  snprintf (status_aux, 50, "{\"Temp\":\"%1d\", \"Hum\":\"%2d\", \"Time\":\"%3d\"}", int (t), int (h), now);
   status_sensors = status_aux;
   
   }
-
+void checkMetadata(){
+  
+   snprintf (meta_aux, 50, "{\"mem\":\"%1d\",\"proc\":\"1500\",\"batt\":\"80\"}", getFreeSpace(root_2,0));
+  status_meta = meta_aux;
+  }
 void loop() {
 
   if (!client.connected()) {
     reconnect();
   }
   client.loop();
-
    checkTempAndHum();
+   checkMetadata();
    updateStatus ("istate",nodeID,status_sensors);
-   updateStatus ("meta",nodeID,"{\"mem\":\"3\",\"proc\":\"1500\",\"batt\":\"80\",\"lat\":\"0.5\"}");
+   updateStatus ("meta",nodeID,status_meta);
+   //updateStatus ("meta",nodeID,"{\"mem\":\"3\",\"proc\":\"1500\",\"batt\":\"80\",\"lat\":\"0.5\"}");
    delay (5000);
  
 }
