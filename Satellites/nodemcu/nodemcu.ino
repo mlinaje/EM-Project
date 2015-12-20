@@ -42,6 +42,7 @@ int busy = 0;
 File root_2;
 int freeSpace = 0;
 
+
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   Serial.begin(115200);
@@ -122,7 +123,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
      client.publish("Home/nodo_mcu_1/reply",payload_char); 
   }
   if (topic_str == "Home/nodo_mcu_1/model_req"){
-     client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"%\"}");  
+     client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"mV\"}");  
   }    
   else { 
   //do something
@@ -138,7 +139,7 @@ void reconnect() {
       client.subscribe("Home/nodo_central/ctrl");
       client.subscribe("Home/nodo_mcu_1/request");
       client.subscribe("Home/nodo_mcu_1/model_req");
-      client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Kb\",\"proc\":\"noUnit\",\"batt\":\"%\"}");
+      client.publish("Home/nodo_mcu_1/model","{\"mem\":\"Kb\",\"proc\":\"noUnit\",\"batt\":\"mV\"}");
     } else {
       delay(5000);
     }
@@ -166,6 +167,15 @@ int getFreeSpace(File dir, int numTabs) {
 
 }
 }
+
+int leer_voltios(){ 
+  float  batLevel;
+  int batLevelInt;
+  batLevel = (analogRead(A0)*3.7)/321;
+  batLevelInt =  batLevel*1000;
+
+ return (batLevelInt);
+}
 void checkTempAndHum (){
   h = dht.readHumidity(); //Se lee la humedad
   t = dht.readTemperature(); //Se lee la temperatura
@@ -176,8 +186,7 @@ void checkTempAndHum (){
   
   }
 void checkMetadata(){
-  
-   snprintf (meta_aux, 50, "{\"mem\":\"%1d\",\"proc\":\"1500\",\"batt\":\"80\"}", getFreeSpace(root_2,0));
+   snprintf (meta_aux, 50, "{\"mem\":\"%1d\",\"proc\":\"1500\",\"batt\":\"%2d\"}", getFreeSpace(root_2,0),leer_voltios());
   status_meta = meta_aux;
   }
 void loop() {
@@ -190,7 +199,6 @@ void loop() {
    checkMetadata();
    updateStatus ("istate",nodeID,status_sensors);
    updateStatus ("meta",nodeID,status_meta);
-   //updateStatus ("meta",nodeID,"{\"mem\":\"3\",\"proc\":\"1500\",\"batt\":\"80\",\"lat\":\"0.5\"}");
    delay (5000);
  
 }
