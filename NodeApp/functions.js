@@ -17,6 +17,7 @@ var Nodos_gl = [];
 var NodosMeta = [];
 var currentStgNodes = [];
 var requests = [];
+var latency = [];
 
 var Mem = []; //array that contains the memory param for every node
 
@@ -90,16 +91,18 @@ function getModel_Meta (){
 				NodosModel.push(nodo_obj);
 			}
 			
-			for (var i = 0; i<NodosModel.length; i++){
-				var obj = JSON.parse(NodosModel[i]);
-				var nodo_aux = Object.keys(obj)[0];
-				nodos.push(nodo_aux);
-			}
+			else {
+				for (var i = 0; i<NodosModel.length; i++){
+					var obj = JSON.parse(NodosModel[i]);
+					var nodo_aux = Object.keys(obj)[0];
+					nodos.push(nodo_aux);
+				}
 
-			if (nodos.indexOf(nodo) != -1){
-				NodosModel[nodos.indexOf(nodo)] = nodo_obj;
-			}else{
-				NodosModel.push(nodo_obj);
+				if (nodos.indexOf(nodo) != -1){
+					NodosModel[nodos.indexOf(nodo)] = nodo_obj;
+				}else{
+					NodosModel.push(nodo_obj);
+				}
 			}
 			nodos = [];
 		}
@@ -117,6 +120,7 @@ function getModel_Meta (){
 				topic = topic.concat('/model_req');	
 				client.publish(topic, "req");
 			}
+			nodos = [];
 			var nodo_obj = '';
 			nodo_obj = '{"';
 			nodo_obj = nodo_obj.concat(nodo);
@@ -127,26 +131,29 @@ function getModel_Meta (){
 			if(NodosMeta.length == 0){
 				NodosMeta.push(nodo_obj);
 			}
-			
-			for (var i = 0; i<NodosMeta.length; i++){
-				var obj = JSON.parse(NodosMeta[i]);
-				var nodo_aux = Object.keys(obj)[0];
-				nodos.push(nodo_aux);
-			}
+			else{
+				for (var i = 0; i<NodosMeta.length; i++){
+					var obj = JSON.parse(NodosMeta[i]);
+					var nodo_aux = Object.keys(obj)[0];
+					nodos.push(nodo_aux);
+				}
 
-			if (nodos.indexOf(nodo) != -1){
-				NodosMeta[nodos.indexOf(nodo)] = nodo_obj;
-			}else{
-				NodosMeta.push(nodo_obj);			
+				if (nodos.indexOf(nodo) != -1){
+					NodosMeta[nodos.indexOf(nodo)] = nodo_obj;
+				}else{
+					NodosMeta.push(nodo_obj);			
 			}
-			
+			}
 			nodos = [];
 			Nodes();
 		}
 		
 		if (channel == "reply"){
+			
 			var token_aux = message.toString();
+			
 			for (var i = 0; i<requests.length; i++){
+				
 				var obj = JSON.parse(requests[i]);
 				var token = obj.token;
 				
@@ -155,11 +162,54 @@ function getModel_Meta (){
 					var nodo = obj.nodo;
 					var now = new Date();
 					var milis = now.getTime();
-					var dif = milis - time;
-					//add the dif param to meta array
+					var dif = milis - time;	
+					
+					if(latency.length == 0){
+						var nodo_obj = '';
+						nodo_obj = '{"nodo" : "';
+						nodo_obj = nodo_obj.concat(nodo);
+						nodo_obj = nodo_obj.concat('", "lat" : "'); 
+						nodo_obj = nodo_obj.concat(dif);
+						nodo_obj = nodo_obj.concat('", "tot" : "1" }');
+						latency.push(nodo_obj);
+					}
+					else {
+
+						for (var j = 0; j<latency.length; j++){
+							var obj = JSON.parse(latency[j]);
+							var nodo_aux = obj.nodo;
+							nodos.push(nodo_aux);
+						}
+						if (nodos.indexOf(nodo) != -1){ //existe ya en el array
+
+							var obj = JSON.parse(latency[nodos.indexOf(nodo)]);
+							var lat = obj.lat;
+							var lat_total = parseInt(lat) + dif;
+							var tot = parseInt(obj.tot) + 1;
+							latency.splice(nodos.indexOf(nodo));
+							nodo_obj = '{"nodo" : "';
+							nodo_obj = nodo_obj.concat(nodo);
+							nodo_obj = nodo_obj.concat('", "lat" : "'); 
+							nodo_obj = nodo_obj.concat(lat_total);
+							nodo_obj = nodo_obj.concat('", "tot" : "');
+							nodo_obj = nodo_obj.concat(tot);
+							nodo_obj = nodo_obj.concat('" }');
+							latency.push(nodo_obj);
+						}else{
+							var nodo_obj = '';
+							nodo_obj = '{"nodo" : "';
+							nodo_obj = nodo_obj.concat(nodo);
+							nodo_obj = nodo_obj.concat('", "lat" : "'); 
+							nodo_obj = nodo_obj.concat(dif);
+							nodo_obj = nodo_obj.concat('", "tot" : "1" }');
+							latency.push(nodo_obj);		
+						}
+					}
 					requests.splice(i,1);
 				}
 			}
+			console.log(latency);
+			nodos = [];
 		}
 	});
 	
@@ -227,13 +277,25 @@ function addParam (param, valu, unit){
 			
 		  break;
 		case "proc":
-		
+			
 			valu = parseFloat (valu);
 			Proc.push(valu);
 			
 		  break;
 		case "batt":
 		
+			switch(unit)
+			{
+			case "V":
+				valu = parseFloat (valu); //By default the unit for the battery is V
+				break;
+			case "mV":
+				valu = valu/1000;
+				break;
+			default:
+				console.log("Erro to convert the battery param")
+			}
+			
 			valu = parseFloat (valu);
 			Batt.push(valu);
 			
@@ -364,7 +426,6 @@ function request_daemon (){
 			topic = topic.concat('/reply');			
 			client.subscribe(topic);
 
-			//crear el json con la hora, el nodo y el token y meterlo en el array
 			var token = getRandomInt(100,1000);	
 			var now = new Date();
 			var milis = now.getTime();
