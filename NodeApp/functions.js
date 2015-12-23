@@ -86,7 +86,11 @@ function getModel_Meta (){
 			nodo_obj = nodo_obj.concat('":');
 			nodo_obj = nodo_obj.concat(message.toString());
 			nodo_obj = nodo_obj.concat('}');
-
+			
+			var obj = JSON.parse(nodo_obj);
+			obj[nodo]["lat"] = "mseg";
+			nodo_obj = JSON.stringify(obj);
+			
 			if(NodosModel.length == 0){
 				NodosModel.push(nodo_obj);
 			}
@@ -186,7 +190,7 @@ function getModel_Meta (){
 							var lat = obj.lat;
 							var lat_total = parseInt(lat) + dif;
 							var tot = parseInt(obj.tot) + 1;
-							latency.splice(nodos.indexOf(nodo));
+							latency.splice(nodos.indexOf(nodo),1);
 							nodo_obj = '{"nodo" : "';
 							nodo_obj = nodo_obj.concat(nodo);
 							nodo_obj = nodo_obj.concat('", "lat" : "'); 
@@ -473,10 +477,42 @@ function clean_daemon(){
 	}, 10000);
 }
 
+function averageLatency_daemon(){
+	var interval = setInterval(function() {
+		for (var i = 0; i<latency.length; i++){
+			var nodos = [];
+			var obj = JSON.parse(latency[i]);
+			var nodo =obj.nodo;
+			var lat = parseInt(obj.lat);
+			var tot = parseInt(obj.tot);
+			var lat_avg = lat/tot;
+			latency.splice(i,1);
+			
+			for (var j = 0; j<NodosMeta.length; j++){
+					var obj = JSON.parse(NodosMeta[j]);
+					var nodo_aux = Object.keys(obj)[0];
+					nodos.push(nodo_aux);
+				}
+
+				if (nodos.indexOf(nodo) != -1){ //existe
+					var obj = JSON.parse(NodosMeta[nodos.indexOf(nodo)]);
+					obj[nodo]["lat"] = lat_avg;
+					NodosMeta[nodos.indexOf(nodo)] = JSON.stringify(obj);
+					console.log(NodosModel);
+					console.log(NodosMeta);
+					
+				}
+			
+			
+		}
+	}, 30000);
+}
+
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
+exports.averageLatency_daemon = averageLatency_daemon;
 exports.clean_daemon = clean_daemon;
 exports.getModel_Meta = getModel_Meta;
 exports.request_daemon = request_daemon;

@@ -18,4 +18,5 @@ app.newConection(port, host, keepalive);
 app.getModel_Meta();
 app.request_daemon();
 app.clean_daemon();
+app.averageLatency_daemon();
 
