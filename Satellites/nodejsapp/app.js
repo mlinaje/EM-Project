@@ -4,8 +4,11 @@ var app = require('./functions')
 	,keepalive =10000;
 	
 	
-app.newConection(port, host, keepalive);  
+app.newConection(port, host, keepalive);
+ 
 app.main_callback();
 app.main_loop();
+app.check_ram();
+app.check_mem();
 
 
