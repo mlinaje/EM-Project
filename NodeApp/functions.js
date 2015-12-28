@@ -18,6 +18,7 @@ var NodosMeta = [];
 var currentStgNodes = [];
 var requests = [];
 var latency = [];
+var latency_avg = [];
 
 var Mem = []; //array that contains the memory param for every node
 
@@ -26,6 +27,20 @@ var Proc = []; //array that contains the process capability param for every node
 var Batt = []; //array that contains the battery param for every node
 
 var Lat = []; //array that contains the latency param for every node
+
+var Power = [];
+
+var FreeRAM = [];
+
+var parameters = {
+	weightMem :"0.2",
+	weigthProc :"0.2",
+	weigthBatt :"0.1",
+	weigthLat :"0.2",
+	weigthPower :"0.2",
+	weigthRAM: "0.1",
+	numberNodes: "2"
+};
 
 function newConection (port, host, keepalive) {
 		
@@ -112,7 +127,7 @@ function getModel_Meta (){
 		}
 		
 		if (channel == "meta"){
-			
+
 			for (var i = 0; i<NodosModel.length; i++){
 				var obj = JSON.parse(NodosModel[i]);
 				var nodo_aux = Object.keys(obj)[0];
@@ -123,6 +138,8 @@ function getModel_Meta (){
 				topic = topic.concat(nodo);
 				topic = topic.concat('/model_req');	
 				client.publish(topic, "req");
+				return; //salimos de la funcion
+				
 			}
 			nodos = [];
 			var nodo_obj = '';
@@ -131,7 +148,19 @@ function getModel_Meta (){
 			nodo_obj = nodo_obj.concat('":');
 			nodo_obj = nodo_obj.concat(message.toString());
 			nodo_obj = nodo_obj.concat('}');
+		
+			for (var j = 0; j<latency_avg.length; j++){
+				var obj = JSON.parse(latency_avg[j]);
+				var nodo_aux1 = obj.nodo;
+				var lat = obj.lat_avg;
 
+				if (nodo == nodo_aux1){
+					var obj = JSON.parse(nodo_obj);
+					obj[nodo]["lat"] = lat.toString();
+					nodo_obj = JSON.stringify(obj);
+				}
+			}
+			
 			if(NodosMeta.length == 0){
 				NodosMeta.push(nodo_obj);
 			}
@@ -212,7 +241,6 @@ function getModel_Meta (){
 					requests.splice(i,1);
 				}
 			}
-			console.log(latency);
 			nodos = [];
 		}
 	});
@@ -222,7 +250,9 @@ function getModel_Meta (){
 }
 
 function Nodes (){
-
+	console.log(NodosMeta);
+	console.log(NodosModel);
+	
 	for (var i = 0; i<NodosMeta.length; i++){
 		var obj = JSON.parse(NodosMeta[i]);
 		var keys_nodes = Object.keys(obj);
@@ -239,12 +269,14 @@ function Nodes (){
 		
 	}
 	
-		getNodes (0.4, 0.25, 0.15, 0.2, 2);	
+		getNodes (parameters);	
 		
 		Mem = []; 
 		Proc = []; 
 		Batt = []; 
 		Lat = []; 
+		Power = [];
+		FreeRAM = [];
 };
 
 function searchUnit (nodo,param){
@@ -262,6 +294,9 @@ function addParam (param, valu, unit){
 	switch(param)
 		{
 		case "mem":
+		
+			var error;
+			
 			switch(unit)
 			{
 			case "Gb":
@@ -274,87 +309,187 @@ function addParam (param, valu, unit){
 				valu = valu/1024;
 				break;
 			default:
-				console.log("Erro to convert the memory param")
+				error = true;
 			}
 			
-			Mem.push(valu);
-			
-		  break;
+			if (!error){
+				
+				Mem.push(valu);
+				
+			}
+			error = false;
+			break;
+		  
 		case "proc":
 			
 			valu = parseFloat (valu);
 			Proc.push(valu);
 			
 		  break;
+		  
 		case "batt":
 		
 			switch(unit)
 			{
-			case "V":
-				valu = parseFloat (valu); //By default the unit for the battery is V
+				case "V":
+					valu = parseFloat (valu); //By default the unit for the battery is V
+					break;
+				case "mV":
+					valu = valu/1000;
+					break;
+				case "noUnit":
+					valu = valu;
+					break;	
+
+				default:
+					error = true;
+				}
+				
+				if (!error){
+					
+					Batt.push(valu);
+					
+				}
+				error = false;
 				break;
-			case "mV":
-				valu = valu/1000;
-				break;
-			default:
-				console.log("Erro to convert the battery param")
-			}
-			
-			valu = parseFloat (valu);
-			Batt.push(valu);
-			
-		  break;
-		case "lat":
-		switch(unit)
-			{
-		  case "seg":
-				valu = parseFloat (valu); 
-				break;
-			case "mseg":
-				valu = valu/1000;
-				break;
-			default:
-				console.log("Erro to convert the latency param")
-			}
-		  Lat.push(valu);
 		  
-		  break;
+		case "lat":
+			switch(unit)
+				{
+			  case "seg":
+					valu = parseFloat (valu); 
+					break;
+				case "mseg":
+					valu = valu/1000;
+					break;
+				default:
+					error = true;
+				}
+				
+				if (!error){
+					
+					Lat.push(valu);
+					
+				}
+				error = false;
+				break;
+				
+		case "power":
+				
+			Power.push(valu);
+			
+			break;
+
+		case "freeRAM":
+		
+			var error;
+			
+			switch(unit)
+			{
+			case "Gb":
+				valu = valu*1024;
+				break;
+			case "Mb":
+				valu = parseFloat (valu); //By default the unit for the memory is Mb
+				break;
+			case "Kb":
+				valu = valu/1024;
+				break;
+			default:
+				error = true;
+			}
+			
+			if (!error){
+				
+				FreeRAM.push(valu);
+				
+			}
+			error = false;
+			break;
+			
 		default:
 		  console.log("Erro to add the param")
 		}
-			
+		
 	
 };
 
-
-function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
+function getNodes (param){
 	var aux =[];
 	var result = [];
 	
-	for(var i = 0; i < Mem.length; i++){
-		aux[i] = (Mem[i]/Math.max.apply(null,Mem))*weightMem;
-		result [i] = 0 + aux[i];
-	}
+	var weightMem = param.weightMem;
+	var weigthProc = param.weigthProc;
+	var weigthBatt = param.weigthBatt;
+	var weigthLat = param.weigthLat;
+	var weigthPower = param.weigthPower;
+	var weigthRAM = param.weigthRAM;
+	var numberNodes = param.numberNodes;
 	
-	for(var i = 0; i < Proc.length; i++){
-		aux[i] = (Proc[i]/Math.max.apply(null,Proc))*weigthProc;	
-		result [i] = result [i] + aux[i];
-	}
-	for(var i = 0; i < Batt.length; i++){
-		aux[i] = (Batt[i]/Math.max.apply(null,Batt))*weigthBatt;
-		result [i] = result [i] + aux[i];		
-	}
-	for(var i = 0; i < Lat.length; i++){
-		aux[i] = (Lat[i]/Math.max.apply(null,Lat))*weigthLat;
-		result [i] = result [i] - aux[i];
-	}
-	
-		for (var i = 0; i<NodosModel.length; i++){
-			var obj = JSON.parse(NodosModel[i]);
-			var nodo_aux = Object.keys(obj)[0];
-			Nodos_gl.push(nodo_aux);
+	if(weightMem != undefined)
+	{
+		for(var i = 0; i < Mem.length; i++){
+			aux[i] = (Mem[i]/Math.max.apply(null,Mem))*weightMem;
+			result [i] = 0;
+			result [i] = result [i] + aux[i];
 		}
-		
+	}
+	  
+	if(weigthProc != undefined)
+	{
+		for(var i = 0; i < Proc.length; i++){
+			aux[i] = (Proc[i]/Math.max.apply(null,Proc))*weigthProc;
+			result [i] = result [i] + aux[i];
+		}
+	}
+	
+	if(weigthBatt != undefined)
+	{
+		for(var i = 0; i < Batt.length; i++){
+			if (Batt[i] == "-1"){
+				aux[i] = parseFloat(weigthBatt);
+				result [i] = result [i] + aux[i];
+
+			}
+			else {
+				aux[i] = (Batt[i]/Math.max.apply(null,Batt))*weigthBatt;
+				result [i] = result [i] - aux[i];
+
+			}
+		}
+	}
+
+	if(weigthLat != undefined)
+	{
+		for(var i = 0; i < Lat.length; i++){
+			aux[i] = (Lat[i]/Math.max.apply(null,Lat))*weigthLat;
+			result [i] = result [i] - aux[i];
+		}
+	}	
+
+	if(weigthPower != undefined)
+	{
+		for(var i = 0; i < Power.length; i++){
+			aux[i] = Power[i]*weigthPower;	
+			result [i] = result [i] + aux[i];
+
+		}
+	}	
+
+	if(weigthRAM != undefined)
+	{	
+		for(var i = 0; i < FreeRAM.length; i++){
+			aux[i] = (FreeRAM[i]/Math.max.apply(null,FreeRAM))*weigthRAM;
+			result [i] = result [i] + aux[i];
+		}
+	}
+	
+	for (var i = 0; i<NodosModel.length; i++){
+		var obj = JSON.parse(NodosModel[i]);
+		var nodo_aux = Object.keys(obj)[0];
+		Nodos_gl.push(nodo_aux);
+	}
+	
 	var nextStgNodes = [];
 	var resultLength = result.length;
 	if (numberNodes <= result.length){
@@ -372,12 +507,11 @@ function getNodes (weightMem, weigthProc, weigthBatt, weigthLat, numberNodes){
 		}
 	}
 	
-
 	updateStgNodes(nextStgNodes);
 	
 	Nodos_gl = [];
 	nextStgNodes = [];	
-};
+}
 
 
 function updateStgNodes (nextStgNodes){
@@ -390,7 +524,7 @@ function updateStgNodes (nextStgNodes){
 			msg = msg.concat(nextStgNodes[i]);
 			msg = msg.concat('", "op" : "subs" }');
 			
-			client.publish("/Home/nodo_central/ctrl", msg);
+			client.publish("Home/nodo_central/ctrl", msg);
 		}
 	}
 	
@@ -402,7 +536,7 @@ function updateStgNodes (nextStgNodes){
 			msg = msg.concat(nextStgNodes[i]);
 			msg = msg.concat('", "op" : "unsubs" }');
 			
-			client.publish("/Home/nodo_central/ctrl", msg);
+			client.publish("Home/nodo_central/ctrl", msg);
 			currentStgNodes.splice(i,1);
 		}
 	}
@@ -478,6 +612,7 @@ function clean_daemon(){
 }
 
 function averageLatency_daemon(){
+	var nodos = [];
 	var interval = setInterval(function() {
 		for (var i = 0; i<latency.length; i++){
 			var nodos = [];
@@ -488,23 +623,46 @@ function averageLatency_daemon(){
 			var lat_avg = lat/tot;
 			latency.splice(i,1);
 			
-			for (var j = 0; j<NodosMeta.length; j++){
-					var obj = JSON.parse(NodosMeta[j]);
-					var nodo_aux = Object.keys(obj)[0];
-					nodos.push(nodo_aux);
-				}
+			
+			if(latency_avg.length == 0){
+						var nodo_obj = '';
+						nodo_obj = '{"nodo" : "';
+						nodo_obj = nodo_obj.concat(nodo);
+						nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
+						nodo_obj = nodo_obj.concat(lat_avg);
+						nodo_obj = nodo_obj.concat('"}');
+						latency_avg.push(nodo_obj);
+					}
+					else {
 
-				if (nodos.indexOf(nodo) != -1){ //existe
-					var obj = JSON.parse(NodosMeta[nodos.indexOf(nodo)]);
-					obj[nodo]["lat"] = lat_avg;
-					NodosMeta[nodos.indexOf(nodo)] = JSON.stringify(obj);
-					console.log(NodosModel);
-					console.log(NodosMeta);
-					
-				}
-			
-			
+						for (var j = 0; j<latency_avg.length; j++){
+							var obj = JSON.parse(latency_avg[j]);
+							var nodo_aux = obj.nodo;
+							nodos.push(nodo_aux);
+						}
+						if (nodos.indexOf(nodo) != -1){ //existe ya en el array
+
+							latency_avg.splice(nodos.indexOf(nodo),1);
+							var nodo_obj = '';
+							nodo_obj = '{"nodo" : "';
+							nodo_obj = nodo_obj.concat(nodo);
+							nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
+							nodo_obj = nodo_obj.concat(lat_avg);
+							nodo_obj = nodo_obj.concat('"}');
+							latency_avg.push(nodo_obj);
+						}else{
+							var nodo_obj = '';
+							nodo_obj = '{"nodo" : "';
+							nodo_obj = nodo_obj.concat(nodo);
+							nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
+							nodo_obj = nodo_obj.concat(lat_avg);
+							nodo_obj = nodo_obj.concat('"}');
+							latency_avg.push(nodo_obj);	
+						}
+					}
 		}
+	
+		
 	}, 30000);
 }
 

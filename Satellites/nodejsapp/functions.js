@@ -18,7 +18,7 @@ var topic_model_req = "Home/nodo_1_1/model_req";
 var topic_request = "Home/nodo_1_1/request";
 var topic_reply = "Home/nodo_1_1/reply";
 var topic_model = "Home/nodo_1_1/model";
-var model_stg = "{\"mem\":\"Kb\",\"proc\":\"noUnit\",\"freeRAM\":\"kb\"}";
+var model_stg = "{\"mem\":\"Kb\",\"proc\":\"noUnit\",\"batt\":\"noUnit\",\"power\":\"noUnit\",\"freeRAM\":\"Kb\"}";
 
 var free_stg;
 var memFree;
@@ -109,6 +109,7 @@ function updateStatus (channel, nodeID, message){
 	
 }
 
+
 function checkMetadata(){
 
 	var metadata = '';
@@ -117,7 +118,7 @@ function checkMetadata(){
 	metadata = metadata.concat(free_stg);
 	metadata = metadata.concat('","proc":"');
 	metadata = metadata.concat(proc);
-	metadata = metadata.concat('","freeRAM":"');
+	metadata = metadata.concat('","batt":"-1","power":"1","freeRAM":"');
 	metadata = metadata.concat(memFree);
 	metadata = metadata.concat('"}');
 	
