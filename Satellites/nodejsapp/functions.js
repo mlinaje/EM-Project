@@ -11,6 +11,7 @@ child, child1;
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
 var nodeID = "nodo_1_1"
+var storage = false;
 var proc = 1000;
 var client;
 var topic_ctrl = "Home/nodo_central/ctrl";
@@ -71,15 +72,16 @@ function main_callback (){
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
 		
 		if (channel == "ctrl"){
-
-		var msg = JSON.parse(message.toString());
+		var msg = JSON.parse(message.toString());		
 		if (msg.nodo == nodeID){
 			if (msg.op == "sub"){
-				client.subscribe("Home/storage");
+				client.subscribe("Home/storage/");
+				storage = true;
 			}
 			else{
 				if (msg.op == "unsub"){
-					client.unsubscribe("Home/storage");
+					client.unsubscribe("Home/storage/");
+					storage = false;
 				}
 			}
 		}
@@ -94,6 +96,11 @@ function main_callback (){
 		if (channel == "model_req"){
 			
 			client.publish(topic_model, model_stg);
+		}
+		
+		if (nodo == "storage"){
+			
+	
 		}
 	});
 

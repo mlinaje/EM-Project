@@ -250,9 +250,7 @@ function getModel_Meta (){
 }
 
 function Nodes (){
-	console.log(NodosMeta);
-	console.log(NodosModel);
-	
+
 	for (var i = 0; i<NodosMeta.length; i++){
 		var obj = JSON.parse(NodosMeta[i]);
 		var keys_nodes = Object.keys(obj);
@@ -506,7 +504,6 @@ function getNodes (param){
 			result.splice(result.indexOf(Math.max.apply(null,result)), 1);
 		}
 	}
-	
 	updateStgNodes(nextStgNodes);
 	
 	Nodos_gl = [];
@@ -515,15 +512,15 @@ function getNodes (param){
 
 
 function updateStgNodes (nextStgNodes){
-
+	
 	for(var i = 0; i < nextStgNodes.length; i++){
+
 		if(currentStgNodes.indexOf(nextStgNodes[i]) == -1){
 			currentStgNodes.push(nextStgNodes[i]);
 			
 			var msg = '{"nodo" : "';
 			msg = msg.concat(nextStgNodes[i]);
-			msg = msg.concat('", "op" : "subs" }');
-			
+			msg = msg.concat('", "op" : "sub" }');
 			client.publish("Home/nodo_central/ctrl", msg);
 		}
 	}
@@ -534,7 +531,7 @@ function updateStgNodes (nextStgNodes){
 			
 			var msg = '{"nodo" : "';
 			msg = msg.concat(nextStgNodes[i]);
-			msg = msg.concat('", "op" : "unsubs" }');
+			msg = msg.concat('", "op" : "unsub" }');
 			
 			client.publish("Home/nodo_central/ctrl", msg);
 			currentStgNodes.splice(i,1);
