@@ -11,7 +11,6 @@ child, child1;
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
 var nodeID = "nodo_1_1"
-var storage = false;
 var proc = 1000;
 var client;
 var topic_ctrl = "Home/nodo_central/ctrl";
@@ -19,10 +18,15 @@ var topic_model_req = "Home/nodo_1_1/model_req";
 var topic_request = "Home/nodo_1_1/request";
 var topic_reply = "Home/nodo_1_1/reply";
 var topic_model = "Home/nodo_1_1/model";
-var model_stg = "{\"mem\":\"Kb\",\"proc\":\"noUnit\",\"batt\":\"noUnit\",\"power\":\"noUnit\",\"freeRAM\":\"Kb\"}";
+var model_stg = "{\"nodo\":\"nodo_1_1\",\"mem\":\"Kb\",\"proc\":\"noUnit\",\"timestamp\":\"s\",\"cpu_usage\":\"%\",\"swap\":\"Kb\",\"loadavg\":\"noUnit\",\"batt\":\"noUnit\",\"power\":\"noUnit\",\"freeRAM\":\"Kb\"}";
+
 
 var free_stg;
 var memFree;
+var swapcached;
+var timestamp;
+var loadaverage;
+var cpu_usage;
 
 
 function newConection (port, host, keepalive) {
@@ -55,13 +59,12 @@ function main_callback (){
 	client.subscribe(topic_model_req);
 	client.subscribe(topic_request);
 	client.publish(topic_model, model_stg);
-	
-	// Connect to the db
-	MongoClient.connect("mongodb://localhost:27017/test", function(err, db) {
-	  if(!err) {
-		console.log("We are connected");
-	  }
-	});
+	check_ram();
+	check_mem();
+	check_swap();
+	check_loadaverage();
+	check_timestamp();
+	check_cpu();
 	
 	client.on('message', function (topic_aux, message) {
 		
@@ -75,13 +78,11 @@ function main_callback (){
 		var msg = JSON.parse(message.toString());		
 		if (msg.nodo == nodeID){
 			if (msg.op == "sub"){
-				client.subscribe("Home/storage/");
-				storage = true;
+			client.subscribe({"Home/+/storage" : 1});
 			}
 			else{
 				if (msg.op == "unsub"){
-					client.unsubscribe("Home/storage/");
-					storage = false;
+					client.unsubscribe("Home/+/storage");
 				}
 			}
 		}
@@ -98,9 +99,21 @@ function main_callback (){
 			client.publish(topic_model, model_stg);
 		}
 		
-		if (nodo == "storage"){
+		if (channel == "storage"){
+			//Connect to the db
+			MongoClient.connect("mongodb://localhost:27017/nodo_1_1_db", function(err, db) {
+			  if(err) { return console.dir(err); }
+				var obj = JSON.parse(message.toString());
+				if (obj.nodo == undefined){
+					//insert document
+					db.collection(nodo).insert(obj);		
+				}else{
+					//update document
+					db.collection('model').update({nodo:obj.nodo},{$set: obj}, {'upsert':true});					
+				}
+
+			});
 			
-	
 		}
 	});
 
@@ -109,9 +122,9 @@ function main_callback (){
 
 
 
-function updateStatus (channel, nodeID, message){
+function updateStatus (channel, nodeID, message, _qos){
 	var topic = path.join(prefix, nodeID, channel);
-	client.publish(topic, message);
+	client.publish(topic, message, {qos:_qos});
 	
 	
 }
@@ -131,6 +144,29 @@ function checkMetadata(){
 	
 	return metadata;
 }
+
+
+function checkResources(){
+	var resources = '';
+	    resources = '{"timestamp":"';
+		resources = resources.concat(timestamp);
+		resources = resources.concat('","cpu_usage":"');
+		resources = resources.concat(cpu_usage);
+		resources = resources.concat('","mem":"');
+		resources = resources.concat(free_stg);
+		resources = resources.concat('","swap":"');
+		resources = resources.concat(swapcached);
+		resources = resources.concat('","loadavg":"');
+		resources = resources.concat(loadaverage);
+		resources = resources.concat('","freeRAM":"');
+		resources = resources.concat(memFree);
+		resources = resources.concat('"}');
+		
+		return resources;
+}
+
+
+
 function check_mem (){
 	var interval = setInterval (function(){
 		var max_stg = 1048576; // 1G en kb
@@ -148,36 +184,102 @@ function check_mem (){
 	},1000);
 	
 }	
+
+function check_cpu (){
+	var interval = setInterval (function(){
+		var max_stg = 1048576; // 1G en kb
+		var stg;
+		
+		child1 = exec("grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'", function (error, stdout, stderr) {
+		if (error !== null) {
+			console.log('exec error: ' + error);
+		} else {
+			cpu_usage = parseFloat(stdout);		
+		}
+	  });  	 
+	  
+	},1000);
+	
+}	
 function check_ram (){
 	var interval = setInterval (function(){
 		
 		child = exec("egrep 'MemFree' /proc/meminfo | awk '{print $2}'", function (error, stdout, stderr) {
 		if (error !== null) {
-		console.log('exec error: ' + error);
+			console.log('exec error: ' + error);
 		} else {
-		memFree = parseInt(stdout);
+			memFree = parseInt(stdout);
 		
 		}
 	  });	 
 		  
 	},1000);	
 }
+
+function check_swap (){
+	var interval = setInterval (function(){
+		
+		child = exec("egrep 'SwapCached' /proc/meminfo | awk '{print $2}'", function (error, stdout, stderr) {
+		if (error !== null) {
+			console.log('exec error: ' + error);
+		} else {
+			swapcached = parseFloat(stdout);
+		
+		}
+	  });	 
+		  
+	},1000);	
+}
+
+function check_timestamp (){
+	var interval = setInterval (function(){
+		
+		child = exec("date +%s", function (error, stdout, stderr) {
+		if (error !== null) {
+			console.log('exec error: ' + error);
+		} else {
+			timestamp = parseInt(stdout);
+		
+		}
+	  });	 
+		  
+	},1000);	
+}
+
+function check_loadaverage (){
+	var interval = setInterval (function(){
+		
+		child = exec("uptime | tail -n 1 | awk '{print $10}'", function (error, stdout, stderr) {
+		if (error !== null) {
+			console.log('exec error: ' + error);
+		} else {		
+			loadaverage = stdout.replace(",", ".");
+			loadaverage = parseFloat(loadaverage).toFixed(2);
+		}
+	  });	 
+		  
+	},1000);	
+}
+
 function main_loop(){
 	var interval = setInterval(function() {
-		//check temperatura y humedad
-		//updateStatus("istate", nodeID, "")
-		//check metadatos
-		updateStatus("meta", nodeID, checkMetadata());
-		
+
+		updateStatus("meta", nodeID, checkMetadata(), 0);
+		updateStatus("storage", nodeID, checkResources(), 1);
+
 	}, 5000);
 }
 
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
+function loop_model(){
+	var interval = setInterval(function() {
+		
+		updateStatus("storage", nodeID, model_stg, 1);
+	
+	}, 20000);
 }
 
+
 exports.main_loop = main_loop;
-exports.check_ram = check_ram;
-exports.check_mem = check_mem;
+exports.loop_model = loop_model;
 exports.main_callback = main_callback;
 exports.newConection = newConection;

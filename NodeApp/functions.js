@@ -514,15 +514,17 @@ function getNodes (param){
 function updateStgNodes (nextStgNodes){
 	
 	for(var i = 0; i < nextStgNodes.length; i++){
-
-		if(currentStgNodes.indexOf(nextStgNodes[i]) == -1){
-			currentStgNodes.push(nextStgNodes[i]);
-			
+		
 			var msg = '{"nodo" : "';
 			msg = msg.concat(nextStgNodes[i]);
 			msg = msg.concat('", "op" : "sub" }');
-			client.publish("Home/nodo_central/ctrl", msg);
+			
+		if(currentStgNodes.indexOf(nextStgNodes[i]) == -1){ // No esta en la lista actual de nodos de almacenamiento, por tanto lo mete en la lista
+			currentStgNodes.push(nextStgNodes[i]);			
 		}
+
+		client.publish("Home/nodo_central/ctrl", msg);
+	
 	}
 	
 
