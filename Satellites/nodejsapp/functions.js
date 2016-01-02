@@ -105,11 +105,17 @@ function main_callback (){
 			  if(err) { return console.dir(err); }
 				var obj = JSON.parse(message.toString());
 				if (obj.nodo == undefined){
+					var document= "meta_";
+					document = document.concat(nodo);
 					//insert document
-					db.collection(nodo).insert(obj);		
+					db.collection(document).insert(obj);		
 				}else{
-					//update document
-					db.collection('model').update({nodo:obj.nodo},{$set: obj}, {'upsert':true});					
+					var document= "model_";
+					document = document.concat(nodo);
+					var now = new Date();
+					var milis = now.getTime();
+					obj["time"] = milis;
+					db.collection(document).insert(obj);				
 				}
 
 			});

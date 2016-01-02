@@ -5,18 +5,8 @@ var app = require('./functions')
 	
 	
 app.newConection(port, host, keepalive);  
-// app.checkStatus('istate', 'Nodo_mcu', function (topic, message){
-		// var jsonObj = JSON.parse(message.toString());
-		// console.log ("Temperatura: ");
-		// console.log(jsonObj.Temp);
-		// console.log ("Humedad: ");
-		// console.log(jsonObj.Hum);
-		// console.log ("Segundos: ");
-		// console.log(jsonObj.Time);
-// });
-  
+
 app.getModel_Meta();
 app.request_daemon();
 app.clean_daemon();
 app.averageLatency_daemon();
-

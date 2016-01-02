@@ -4,7 +4,7 @@
 var mqtt = require('mqtt');
 var path = require('path');
 var bunyan = require('bunyan');
-
+var MongoClient = require('mongodb').MongoClient;
 
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
@@ -66,20 +66,6 @@ function newConection (port, host, keepalive) {
 
 }
 
-function checkStatus (channel, nodeID, callback){
-	
-	var topic = path.join(prefix, nodeID, channel);
-	
-		client.subscribe(topic);
-
-	
-		client.on('message', function (topic, message) {
-			callback (topic, message);
-		});
-		
-		
-}
-
 function getModel_Meta (){
 	client.subscribe(topic_model);
 	client.subscribe(topic_meta);
@@ -93,8 +79,7 @@ function getModel_Meta (){
 		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/'));
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
 		
-		if (channel == "model"){
-					
+		if (channel == "model"){	
 			var nodo_obj = '';
 			nodo_obj = '{"';
 			nodo_obj = nodo_obj.concat(nodo);
@@ -105,6 +90,16 @@ function getModel_Meta (){
 			var obj = JSON.parse(nodo_obj);
 			obj[nodo]["lat"] = "mseg";
 			nodo_obj = JSON.stringify(obj);
+			var now = new Date();
+			var milis = now.getTime();
+			obj[nodo]["time"] = milis;
+			//Connect to the db
+			MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
+			  if(err) { return console.dir(err); }
+			  
+				db.collection('model').insert(obj[nodo]);
+
+			});			
 			
 			if(NodosModel.length == 0){
 				NodosModel.push(nodo_obj);
@@ -158,6 +153,17 @@ function getModel_Meta (){
 					var obj = JSON.parse(nodo_obj);
 					obj[nodo]["lat"] = lat.toString();
 					nodo_obj = JSON.stringify(obj);
+					var now = new Date();
+					var milis = now.getTime();
+					obj[nodo]["time"] = milis;
+					//Connect to the db
+					MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
+						if(err) { return console.dir(err); }
+
+						db.collection(nodo).insert(obj[nodo]);					
+
+
+					});	
 				}
 			}
 			
@@ -540,7 +546,18 @@ function updateStgNodes (nextStgNodes){
 		}
 	}
 
-	
+	//Connect to the db
+	MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
+		if(err) { return console.dir(err); }
+		var obj = JSON.parse('{}');
+		var now = new Date();
+		var milis = now.getTime();
+		obj["time"] = milis;
+		obj["stg_nodes"] = currentStgNodes;
+		db.collection('nodes').insert(obj);					
+
+
+	});		
 }
 
 function updateStatus (channel, nodeID, message){
@@ -665,6 +682,8 @@ function averageLatency_daemon(){
 	}, 30000);
 }
 
+
+
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
@@ -674,6 +693,5 @@ exports.clean_daemon = clean_daemon;
 exports.getModel_Meta = getModel_Meta;
 exports.request_daemon = request_daemon;
 exports.newConection = newConection;
-exports.checkStatus = checkStatus;
 exports.updateStatus = updateStatus;
 exports.Nodes = Nodes;
