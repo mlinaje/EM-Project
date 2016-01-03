@@ -1,11 +1,20 @@
 
+/*
+Author: Alfonso Galán Benítez
+
+Description: Main fuctions that the application democratic and distributed storage in sensor networks run
+This app belongs to Alfonso's End Master Proyect
+
+*/
 "use strict";
 
-var mqtt = require('mqtt');
-var path = require('path');
-var bunyan = require('bunyan');
-var MongoClient = require('mongodb').MongoClient;
+// Import the required packages
+var mqtt = require('mqtt'); // Comunication protocol to comunicate with the nodes
+var path = require('path'); // This package is usefull to create the mqtt topcis
+var bunyan = require('bunyan'); // This package is used like debugger
+var MongoClient = require('mongodb').MongoClient; // to storage the information it is used a mongodb database
 
+// Global variables
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
 var client;
@@ -28,10 +37,14 @@ var Batt = []; //array that contains the battery param for every node
 
 var Lat = []; //array that contains the latency param for every node
 
-var Power = [];
+var Power = []; // array that contains the power param for every node
 
-var FreeRAM = [];
+var FreeRAM = []; // array that contains the free RAM param for every node
 
+
+// This json object contains the weight value for each param that the program use
+// The result of add all of them must be 1
+// The param numberNodes contain the number of nodes that will be use to storage the information
 var parameters = {
 	weightMem :"0.2",
 	weigthProc :"0.2",
@@ -42,12 +55,15 @@ var parameters = {
 	numberNodes: "2"
 };
 
+// This function create the connection to a MQTT Broker and show error message if needed
+// Port: tcp port that is listening the requests
+// Host: broker name or ip address 
+// Keepalive: number of miliseconds to recheck the conecction with the subscribers
+
 function newConection (port, host, keepalive) {
-		
-		
+	
 	client = mqtt.connect({ port: port, host: host, keepalive: keepalive});
 
-	
 	client.on('error', function () {
         logger.error({
             method: "connect(error)",
@@ -55,6 +71,7 @@ function newConection (port, host, keepalive) {
             cause: "likely MQTT issue - will automatically reconnect soon",
         }, "unexpected error");
     });
+	
     client.on('close', function () {
         logger.error({
             method: "connect(close)",
@@ -63,23 +80,31 @@ function newConection (port, host, keepalive) {
         }, "unexpected close");
     });
 	
-
 }
 
+// This fuction obtains the data model and the meta data for each node in the network
+// That information is used after to calculate the storage nodes
+
 function getModel_Meta (){
-	client.subscribe(topic_model);
-	client.subscribe(topic_meta);
-	client.subscribe(topic_reply);
 	
+	client.subscribe(topic_model);	// subscription to the topic that receive the data model from every node
+	client.subscribe(topic_meta);	// subscription to the topic that receive the information parameters from every node
+	client.subscribe(topic_reply);	// this subscriptin is used to receive the replies to the requests to calculate the delay param
+	
+	// If the app recevie a mqtt message from one of the topics above
 	client.on('message', function (topic_aux, message) {
 		
 		var nodos = [];
-		var topic_str = topic_aux.toString();
-		topic_aux = topic_aux.substring(1);
-		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/'));
-		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
+		var topic_str = topic_aux.toString(); //byte to string topic change
+		topic_aux = topic_aux.substring(1);	
+		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/')); //parsing the node
+		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );	//parsing the channel
 		
+		//if the communication channel is "model"
 		if (channel == "model"){	
+		
+			// creation the json object that contains the data model for a specific nodeID
+			// it is included the node name to the json object
 			var nodo_obj = '';
 			nodo_obj = '{"';
 			nodo_obj = nodo_obj.concat(nodo);
@@ -87,56 +112,67 @@ function getModel_Meta (){
 			nodo_obj = nodo_obj.concat(message.toString());
 			nodo_obj = nodo_obj.concat('}');
 			
+			// it is included the unit to the latency param
 			var obj = JSON.parse(nodo_obj);
 			obj[nodo]["lat"] = "mseg";
-			nodo_obj = JSON.stringify(obj);
+			nodo_obj = JSON.stringify(obj); // create the json object
+			// the time it is included just to the database storage
 			var now = new Date();
 			var milis = now.getTime();
 			obj[nodo]["time"] = milis;
-			//Connect to the db
+			
+			//Connect to the db to storage the data model to each node
 			MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
-			  if(err) { return console.dir(err); }
+				if(err) { return console.dir(err); }
 			  
-				db.collection('model').insert(obj[nodo]);
+				var document= "model_";
+				document = document.concat(nodo);  // document creation
+				db.collection(document).insert(obj[nodo]); //inset the json object in the document
 
 			});			
 			
+			// if there is not any object in the model array, push the first one
 			if(NodosModel.length == 0){
 				NodosModel.push(nodo_obj);
 			}
 			
 			else {
-				for (var i = 0; i<NodosModel.length; i++){
+				
+				for (var i = 0; i<NodosModel.length; i++){ // this loop get all node names in the array to check if the currect node already exist in it
 					var obj = JSON.parse(NodosModel[i]);
 					var nodo_aux = Object.keys(obj)[0];
-					nodos.push(nodo_aux);
+					nodos.push(nodo_aux); // "nodos" param has all the node names
 				}
 
-				if (nodos.indexOf(nodo) != -1){
+				if (nodos.indexOf(nodo) != -1){ //if the node already exists, the app replace the objetc
 					NodosModel[nodos.indexOf(nodo)] = nodo_obj;
-				}else{
+				}else{ // else, push a new json object
 					NodosModel.push(nodo_obj);
 				}
 			}
-			nodos = [];
+			nodos = []; // cleaning variables
 		}
 		
+		//if the communication channel is "meta"
 		if (channel == "meta"){
 
-			for (var i = 0; i<NodosModel.length; i++){
+			for (var i = 0; i<NodosModel.length; i++){ // get all the node names in "model" array
 				var obj = JSON.parse(NodosModel[i]);
 				var nodo_aux = Object.keys(obj)[0];
 				nodos.push(nodo_aux);
 			}	
-			if (nodos.indexOf(nodo) == -1){
+			if (nodos.indexOf(nodo) == -1){ // if the node exists in "model" array but does not in meta, request the meta data
+			
 				var topic = 'Home/';
 				topic = topic.concat(nodo);
 				topic = topic.concat('/model_req');	
 				client.publish(topic, "req");
-				return; //salimos de la funcion
+				return; // go out the function
 				
 			}
-			nodos = [];
+			nodos = []; //cleaning the "nodos" variable to use it later
+			
+			// create the json objetc to meta data
 			var nodo_obj = '';
 			nodo_obj = '{"';
 			nodo_obj = nodo_obj.concat(nodo);
@@ -144,88 +180,100 @@ function getModel_Meta (){
 			nodo_obj = nodo_obj.concat(message.toString());
 			nodo_obj = nodo_obj.concat('}');
 		
+			// "latency_avg" contains the latency param for all of the nodes so the app search the current node to obtain its latency param
 			for (var j = 0; j<latency_avg.length; j++){
 				var obj = JSON.parse(latency_avg[j]);
 				var nodo_aux1 = obj.nodo;
 				var lat = obj.lat_avg;
 
-				if (nodo == nodo_aux1){
+				if (nodo == nodo_aux1){ // if the param it is no ready for the node still, the meta data object won't be created
+				
 					var obj = JSON.parse(nodo_obj);
 					obj[nodo]["lat"] = lat.toString();
-					nodo_obj = JSON.stringify(obj);
+					nodo_obj = JSON.stringify(obj); // creation of the json object
+					
 					var now = new Date();
 					var milis = now.getTime();
-					obj[nodo]["time"] = milis;
+					obj[nodo]["time"] = milis; //addes the timestamp to database storage
+					
 					//Connect to the db
 					MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
 						if(err) { return console.dir(err); }
-
-						db.collection(nodo).insert(obj[nodo]);					
-
+						
+						var document= "meta_";
+						document = document.concat(nodo); // name of the document
+						db.collection(document).insert(obj[nodo]);	// insert the metadata	in database				
 
 					});	
 				}
 			}
 			
+			// if there is not any object in the model array, push the first one
 			if(NodosMeta.length == 0){
 				NodosMeta.push(nodo_obj);
 			}
 			else{
-				for (var i = 0; i<NodosMeta.length; i++){
+				for (var i = 0; i<NodosMeta.length; i++){ // this loop get all node names in the array to check if the currect node already exist in it
 					var obj = JSON.parse(NodosMeta[i]);
 					var nodo_aux = Object.keys(obj)[0];
 					nodos.push(nodo_aux);
 				}
 
-				if (nodos.indexOf(nodo) != -1){
+				if (nodos.indexOf(nodo) != -1){ //if the node already exists, the app replace the objetc
 					NodosMeta[nodos.indexOf(nodo)] = nodo_obj;
-				}else{
+				}else{ // else, push a new json object
 					NodosMeta.push(nodo_obj);			
 			}
 			}
+			
+			//cleaning the variables
 			nodos = [];
+			// call the function to calculate the storage nodes
 			Nodes();
 		}
 		
+		// if the replies to the request are received. It is used to calculate the latency param
 		if (channel == "reply"){
 			
-			var token_aux = message.toString();
+			var token_aux = message.toString(); //this token it is used like request-reply identification
 			
-			for (var i = 0; i<requests.length; i++){
+			for (var i = 0; i<requests.length; i++){ // search in the request array the specific request
 				
 				var obj = JSON.parse(requests[i]);
 				var token = obj.token;
 				
-				if (token_aux == token){
-					var time = obj.time;
+				if (token_aux == token){ // now the token is used
+					var time = obj.time; //time when the request was send
 					var nodo = obj.nodo;
 					var now = new Date();
-					var milis = now.getTime();
-					var dif = milis - time;	
+					var milis = now.getTime(); //current time
+					var dif = milis - time;	// latency 
 					
-					if(latency.length == 0){
+					// the latency array is used to calculate the latency average in averageLatency_daemon function
+					if(latency.length == 0){ // if the array is empty, push the node latency data the very first time
 						var nodo_obj = '';
 						nodo_obj = '{"nodo" : "';
 						nodo_obj = nodo_obj.concat(nodo);
 						nodo_obj = nodo_obj.concat('", "lat" : "'); 
-						nodo_obj = nodo_obj.concat(dif);
-						nodo_obj = nodo_obj.concat('", "tot" : "1" }');
+						nodo_obj = nodo_obj.concat(dif); // latency for one reply
+						nodo_obj = nodo_obj.concat('", "tot" : "1" }'); //number of the replies to calculate the average
 						latency.push(nodo_obj);
 					}
-					else {
+					else { // if the node already exists, the values are updated
 
-						for (var j = 0; j<latency.length; j++){
+						for (var j = 0; j<latency.length; j++){ // get the  node names to seach the specific one
 							var obj = JSON.parse(latency[j]);
 							var nodo_aux = obj.nodo;
 							nodos.push(nodo_aux);
 						}
-						if (nodos.indexOf(nodo) != -1){ //existe ya en el array
+						if (nodos.indexOf(nodo) != -1){ // the node exists so the values are updated
 
 							var obj = JSON.parse(latency[nodos.indexOf(nodo)]);
 							var lat = obj.lat;
-							var lat_total = parseInt(lat) + dif;
-							var tot = parseInt(obj.tot) + 1;
-							latency.splice(nodos.indexOf(nodo),1);
+							var lat_total = parseInt(lat) + dif; // the app added all the latency param to calculate the average with "tot" param
+							var tot = parseInt(obj.tot) + 1; // add by one each time a new latency value is added
+							
+							latency.splice(nodos.indexOf(nodo),1); //delete the current data and create the new one
 							nodo_obj = '{"nodo" : "';
 							nodo_obj = nodo_obj.concat(nodo);
 							nodo_obj = nodo_obj.concat('", "lat" : "'); 
@@ -234,7 +282,7 @@ function getModel_Meta (){
 							nodo_obj = nodo_obj.concat(tot);
 							nodo_obj = nodo_obj.concat('" }');
 							latency.push(nodo_obj);
-						}else{
+						}else{ // if the node does not exist, just push the new one
 							var nodo_obj = '';
 							nodo_obj = '{"nodo" : "';
 							nodo_obj = nodo_obj.concat(nodo);
@@ -244,9 +292,11 @@ function getModel_Meta (){
 							latency.push(nodo_obj);		
 						}
 					}
+					//delete the current request in "requests" array
 					requests.splice(i,1);
 				}
 			}
+			//cleaning the variables
 			nodos = [];
 		}
 	});
@@ -255,173 +305,147 @@ function getModel_Meta (){
 
 }
 
+//this function search all meta data and the units and group them to call the function that calculate the storage nodes
 function Nodes (){
 
-	for (var i = 0; i<NodosMeta.length; i++){
+	for (var i = 0; i<NodosMeta.length; i++){ //loop to get the node names
 		var obj = JSON.parse(NodosMeta[i]);
 		var keys_nodes = Object.keys(obj);
-		for (var j = 0; j < keys_nodes.length; j++) {
+		for (var j = 0; j < keys_nodes.length; j++) { //for each node, get the parameters names
 			var nodes = obj[keys_nodes[j]];
 			var keys_params = Object.keys(nodes);
-				for (var k = 0; k < keys_params.length; k++) {
-					var val = nodes[keys_params[k]];
-					var unit = searchUnit (keys_nodes[j],keys_params[k]);
-					addParam (keys_params[k], val, unit);
-					
-				}
+			for (var k = 0; k < keys_params.length; k++) { //for each param, get the value and search its unit in "model" array
+				var val = nodes[keys_params[k]]; // value for a specific param
+				var unit = searchUnit (keys_nodes[j],keys_params[k]); // unit for that param
+				addParam (keys_params[k], val, unit); // this function group all the values to compare with the other nodes parameters
+				
+			}
 		}
 		
 	}
 	
-		getNodes (parameters);	
-		
-		Mem = []; 
-		Proc = []; 
-		Batt = []; 
-		Lat = []; 
-		Power = [];
-		FreeRAM = [];
+	getNodes (parameters);	// calling to the function that really calculates the nodes
+	
+	// cleaning the parameter array
+	Mem = []; 
+	Proc = []; 
+	Batt = []; 
+	Lat = []; 
+	Power = [];
+	FreeRAM = [];
 };
 
+// this fuction search the unit for a specific parameter that belongs to a specific node
 function searchUnit (nodo,param){
+	
 	for (var i = 0; i<NodosModel.length; i++){
 		var obj = JSON.parse(NodosModel[i]);
 		if (Object.keys(obj) == nodo ){
-		var unit = obj[nodo][param];
+			var unit = obj[nodo][param];
 		}
 	}
 	
 	return unit;
 };
 
+// this function change the values to a default value and group them in specific array to each parameter that is used in the app to calculate the sorage nodes
 function addParam (param, valu, unit){
 	switch(param)
+	{
+	case "mem": // this case is for the memory parameter
+		
+		switch(unit) // the value is going to be in Mb.
 		{
-		case "mem":
-		
-			var error;
-			
-			switch(unit)
-			{
-			case "Gb":
-				valu = valu*1024;
-				break;
-			case "Mb":
-				valu = parseFloat (valu); //By default the unit for the memory is Mb
-				break;
-			case "Kb":
-				valu = valu/1024;
-				break;
-			default:
-				error = true;
-			}
-			
-			if (!error){
-				
-				Mem.push(valu);
-				
-			}
-			error = false;
+		case "Gb":
+			valu = valu*1024;
 			break;
-		  
-		case "proc":
-			
-			valu = parseFloat (valu);
-			Proc.push(valu);
-			
-		  break;
-		  
-		case "batt":
-		
-			switch(unit)
-			{
-				case "V":
-					valu = parseFloat (valu); //By default the unit for the battery is V
-					break;
-				case "mV":
-					valu = valu/1000;
-					break;
-				case "noUnit":
-					valu = valu;
-					break;	
-
-				default:
-					error = true;
-				}
-				
-				if (!error){
-					
-					Batt.push(valu);
-					
-				}
-				error = false;
-				break;
-		  
-		case "lat":
-			switch(unit)
-				{
-			  case "seg":
-					valu = parseFloat (valu); 
-					break;
-				case "mseg":
-					valu = valu/1000;
-					break;
-				default:
-					error = true;
-				}
-				
-				if (!error){
-					
-					Lat.push(valu);
-					
-				}
-				error = false;
-				break;
-				
-		case "power":
-				
-			Power.push(valu);
-			
+		case "Mb":
+			valu = parseFloat (valu); //By default the unit for the memory is Mb
 			break;
-
-		case "freeRAM":
-		
-			var error;
-			
-			switch(unit)
-			{
-			case "Gb":
-				valu = valu*1024;
-				break;
-			case "Mb":
-				valu = parseFloat (valu); //By default the unit for the memory is Mb
-				break;
-			case "Kb":
-				valu = valu/1024;
-				break;
-			default:
-				error = true;
-			}
-			
-			if (!error){
-				
-				FreeRAM.push(valu);
-				
-			}
-			error = false;
+		case "Kb":
+			valu = valu/1024;
 			break;
-			
 		default:
-		  console.log("Erro to add the param")
+			valu = 0;
 		}
 		
+		break;
+	  
+	case "proc": // this case is for the proccess capacity parameter. This param hasn't unit
+		
+		valu = parseFloat (valu);
+		Proc.push(valu);
+		
+	  break;
+	  
+	case "batt": // this case is for the battery level parameter
 	
+		switch(unit) // the value is going to be in Volts.
+		{
+			case "V":
+				valu = parseFloat (valu); //By default the unit for the battery is V
+				break;
+			case "mV":
+				valu = valu/1000;
+				break;
+			case "noUnit": // this case is for the nodes thant has no battery
+				valu = valu;
+				break;	
+
+			default:
+				valu = 0;
+			}
+			break;
+	  
+	case "lat": //this case is for the latency parameter
+		switch(unit) // the value is going to be in seconds
+			{
+		  case "seg":
+				valu = parseFloat (valu); // by default the unit for the latency is seconds
+				break;
+			case "mseg":
+				valu = valu/1000;
+				break;
+			default:
+				valu = 0;
+			}
+			break;
+			
+	case "power": // case for the power parameter. It indicates if the nodes is feed directly or not
+			
+		Power.push(valu);
+		
+		break;
+
+	case "freeRAM": // case for the free RAM memory in the node
+		
+		switch(unit) // the value is going to be in Mb
+		{
+		case "Gb":
+			valu = valu*1024;
+			break;
+		case "Mb":
+			valu = parseFloat (valu); //By default the unit for the memory is Mb
+			break;
+		case "Kb":
+			valu = valu/1024;
+			break;
+		default:
+			valu = 0;
+		}
+		break;
+		
+	default:
+	  console.log("Erro to add the param")
+	}	
 };
 
+// This function makes calculations for the storage nodes
 function getNodes (param){
 	var aux =[];
 	var result = [];
 	
+	// takes json objetct parameters
 	var weightMem = param.weightMem;
 	var weigthProc = param.weigthProc;
 	var weigthBatt = param.weigthBatt;
@@ -430,88 +454,87 @@ function getNodes (param){
 	var weigthRAM = param.weigthRAM;
 	var numberNodes = param.numberNodes;
 	
-	if(weightMem != undefined)
+	if(weightMem != undefined) //check if there weight for this parameter
 	{
-		for(var i = 0; i < Mem.length; i++){
-			aux[i] = (Mem[i]/Math.max.apply(null,Mem))*weightMem;
-			result [i] = 0;
-			result [i] = result [i] + aux[i];
+		for(var i = 0; i < Mem.length; i++){ // through the loop to get the part that provides memory
+			aux[i] = (Mem[i]/Math.max.apply(null,Mem))*weightMem; // calculates the percentage and multiply it by the weight
+			result [i] = 0; // because of it is the fist
+			result [i] = result [i] + aux[i]; //added to the result for this specific node
 		}
 	}
 	  
-	if(weigthProc != undefined)
+	if(weigthProc != undefined) //check if there weight for this parameter
 	{
-		for(var i = 0; i < Proc.length; i++){
-			aux[i] = (Proc[i]/Math.max.apply(null,Proc))*weigthProc;
-			result [i] = result [i] + aux[i];
+		for(var i = 0; i < Proc.length; i++){ // through the loop to get the part that provides the process capacity
+			aux[i] = (Proc[i]/Math.max.apply(null,Proc))*weigthProc; // calculates the percentage and multiply it by the weight
+			result [i] = result [i] + aux[i]; //added to the result for this specific node
 		}
 	}
 	
-	if(weigthBatt != undefined)
+	if(weigthBatt != undefined) //check if there weight for this parameter
 	{
-		for(var i = 0; i < Batt.length; i++){
-			if (Batt[i] == "-1"){
+		for(var i = 0; i < Batt.length; i++){ // through the loop to get the part that provides the battery
+			if (Batt[i] == "-1"){ // if the node is feeded directly
 				aux[i] = parseFloat(weigthBatt);
-				result [i] = result [i] + aux[i];
+				result [i] = result [i] + aux[i]; //added to the result for this specific node
 
 			}
-			else {
-				aux[i] = (Batt[i]/Math.max.apply(null,Batt))*weigthBatt;
-				result [i] = result [i] - aux[i];
+			else { // we proceed as usual
+				aux[i] = (Batt[i]/Math.max.apply(null,Batt))*weigthBatt;  // calculates the percentage and multiply it by the weight
+				result [i] = result [i] - aux[i]; //added to the result for this specific node
 
 			}
 		}
 	}
 
-	if(weigthLat != undefined)
+	if(weigthLat != undefined) //check if there weight for this parameter
 	{
-		for(var i = 0; i < Lat.length; i++){
-			aux[i] = (Lat[i]/Math.max.apply(null,Lat))*weigthLat;
-			result [i] = result [i] - aux[i];
+		for(var i = 0; i < Lat.length; i++){ // through the loop to get the part that provides the latency
+			aux[i] = (Lat[i]/Math.max.apply(null,Lat))*weigthLat; // calculates the percentage and multiply it by the weight
+			result [i] = result [i] - aux[i]; //added to the result for this specific node
 		}
 	}	
 
-	if(weigthPower != undefined)
+	if(weigthPower != undefined) //check if there weight for this parameter
 	{
-		for(var i = 0; i < Power.length; i++){
-			aux[i] = Power[i]*weigthPower;	
-			result [i] = result [i] + aux[i];
+		for(var i = 0; i < Power.length; i++){  // through the loop to get the part that provides the power parameter
+			aux[i] = Power[i]*weigthPower;	  // calculates the percentage and multiply it by the weight
+			result [i] = result [i] + aux[i]; //added to the result for this specific node
 
 		}
 	}	
 
-	if(weigthRAM != undefined)
+	if(weigthRAM != undefined) //check if there weight for this parameter
 	{	
-		for(var i = 0; i < FreeRAM.length; i++){
-			aux[i] = (FreeRAM[i]/Math.max.apply(null,FreeRAM))*weigthRAM;
-			result [i] = result [i] + aux[i];
+		for(var i = 0; i < FreeRAM.length; i++){ // through the loop to get the part that provides the free RAM parameter
+			aux[i] = (FreeRAM[i]/Math.max.apply(null,FreeRAM))*weigthRAM;  // calculates the percentage and multiply it by the weight
+			result [i] = result [i] + aux[i]; //added to the result for this specific node
 		}
 	}
 	
-	for (var i = 0; i<NodosModel.length; i++){
+	
+	for (var i = 0; i<NodosModel.length; i++){ // get the node names
 		var obj = JSON.parse(NodosModel[i]);
 		var nodo_aux = Object.keys(obj)[0];
 		Nodos_gl.push(nodo_aux);
 	}
 	
-	var nextStgNodes = [];
-	var resultLength = result.length;
-	if (numberNodes <= result.length){
+	var nextStgNodes = []; // next storage nodes
+	if (numberNodes <= result.length){ // we want to have less number of storage nodes than we have
 		for (var i = 0; i < numberNodes; i++){
-			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]);
-			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1);
-			result.splice(result.indexOf(Math.max.apply(null,result)), 1);
+			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]); // adds the node with better punctuation to nextStgNodes
+			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1); // delete the previous node for nodos_gl array 
+			result.splice(result.indexOf(Math.max.apply(null,result)), 1); // delete the previus node for result array 
 		}
 	}
-	else {
-		for (var i = 0; i < resultLength; i++){
-			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]);
-			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1);
-			result.splice(result.indexOf(Math.max.apply(null,result)), 1);
+	else { // we want to have grater number of storage nodes than we have
+		for (var i = 0; i < result.length; i++){
+			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]); // adds the node with better punctuation
+			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1); // delete the previous node for nodos_gl array 
+			result.splice(result.indexOf(Math.max.apply(null,result)), 1); // delete the previus node for result array 
 		}
 	}
-	updateStgNodes(nextStgNodes);
-	
+	updateStgNodes(nextStgNodes); // communicates  which nodes have to store and which have not
 	Nodos_gl = [];
 	nextStgNodes = [];	
 }
