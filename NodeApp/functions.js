@@ -540,38 +540,41 @@ function getNodes (param){
 }
 
 
+//This function is responsible for communicating to the nodes what to do
 function updateStgNodes (nextStgNodes){
 	
-	for(var i = 0; i < nextStgNodes.length; i++){
+	//first, the application informs the nodes that they have to subscribe to the channel to which you all the information must be stored
+	for(var i = 0; i < nextStgNodes.length; i++){ 
 		
-			var msg = '{"nodo" : "';
+			var msg = '{"nodo" : "'; // the message is created
 			msg = msg.concat(nextStgNodes[i]);
 			msg = msg.concat('", "op" : "sub" }');
 			
-		if(currentStgNodes.indexOf(nextStgNodes[i]) == -1){ // No esta en la lista actual de nodos de almacenamiento, por tanto lo mete en la lista
+		if(currentStgNodes.indexOf(nextStgNodes[i]) == -1){ // If the node is not in the list of current storage nodes, it is included
 			currentStgNodes.push(nextStgNodes[i]);			
 		}
 
-		client.publish("Home/nodo_central/ctrl", msg);
+		client.publish("Home/nodo_central/ctrl", msg); // the order is published
 	
 	}
 	
 
-	for(var i = 0; i < currentStgNodes.length; i++){		
-		if(nextStgNodes.indexOf(currentStgNodes[i]) == -1){
+	for(var i = 0; i < currentStgNodes.length; i++){
+		if(nextStgNodes.indexOf(currentStgNodes[i]) == -1){ // If the node is not in the list of next storage nodes, it is deleted and send the unpublish message
 			
-			var msg = '{"nodo" : "';
+			var msg = '{"nodo" : "'; // the unsubscribe order is create
 			msg = msg.concat(nextStgNodes[i]);
 			msg = msg.concat('", "op" : "unsub" }');
 			
-			client.publish("Home/nodo_central/ctrl", msg);
-			currentStgNodes.splice(i,1);
+			client.publish("Home/nodo_central/ctrl", msg); //the order is published
+			currentStgNodes.splice(i,1); //the node is deleted for the current storage nodes list
 		}
 	}
 
-	//Connect to the db
+	//Connects to the db to store the current storage nodes and the timestamp associated
 	MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
 		if(err) { return console.dir(err); }
+		
 		var obj = JSON.parse('{}');
 		var now = new Date();
 		var milis = now.getTime();
@@ -579,56 +582,44 @@ function updateStgNodes (nextStgNodes){
 		obj["stg_nodes"] = currentStgNodes;
 		db.collection('nodes').insert(obj);					
 
-
 	});		
 }
 
-function updateStatus (channel, nodeID, message){
-	var topic = path.join(prefix, nodeID, channel);
-	client.publish(topic, message);
-	
-	
-}
-
+// this fuctin is responsible to send request to every single node to calculate, later, the latency parameter
 function request_daemon (){
 
-	var interval = setInterval(function() {
+	var interval = setInterval(function() { // it sends a request for every node
 		for (var i = 0; i<NodosMeta.length; i++){
 			var obj = JSON.parse(NodosMeta[i]);
 			var keys_nodes = Object.keys(obj);
 
-			
-			var topic = 'Home/';
-			topic = topic.concat(keys_nodes[0]);
-			topic = topic.concat('/reply');			
-			client.subscribe(topic);
-
-			var token = getRandomInt(100,1000);	
+			var token = getRandomInt(100,1000);	// a token is created to identify the request when the reply come back
 			var now = new Date();
-			var milis = now.getTime();
+			var milis = now.getTime(); // keeps the current timestamp to calculate the difference with the reply
 			
-			var json_req = '{"nodo" : "';
+			var json_req = '{"nodo" : "'; // this json object store the request status to compare with the reply
 			json_req = json_req.concat(keys_nodes[0]);
 			json_req = json_req.concat('", "token" : "');
 			json_req = json_req.concat(token);
 			json_req = json_req.concat('", "time" : "');
 			json_req = json_req.concat(milis);
 			json_req = json_req.concat('"}');
-			requests.push(json_req);
-			topic = 'Home/';
+			requests.push(json_req); // the json object is pushed to "request" array
+			
+			var topic = 'Home/'; // topic is created with the node name
 			topic = topic.concat(keys_nodes[0]);
 			topic = topic.concat('/request');
-			client.publish(topic, token.toString());
+			client.publish(topic, token.toString()); // the request is published
 		}
-	}, 5000);
-		
-
+	}, 5000); // every 5 seconds a request is sended
 
 }
 
+// this function is responsible to clean the request that has not been replied or has been replied too late. If there is not 
+// reply, the metadata that belongs to that node is removed to recalculate the storage nodes
 function clean_daemon(){
 	var interval = setInterval(function() {
-		for (var i = 0; i<requests.length; i++){
+		for (var i = 0; i<requests.length; i++){ // for every request, checks if the difference with the current time is greater than a certain value
 			var obj = JSON.parse(requests[i]);
 			var time = obj.time;
 			var nodo = obj.nodo;
@@ -641,80 +632,82 @@ function clean_daemon(){
 					var obj_meta = JSON.parse(NodosMeta[i]);
 					var keys_nodes = Object.keys(obj_meta);
 					if (nodo == keys_nodes[0]){					
-						NodosMeta.splice(i,1);
+						NodosMeta.splice(i,1); // the metadata for this node is removed
 					}
 				}
-				requests.splice(i,1);
+				requests.splice(i,1); // this specific request is deleted
 			}
 		}
 	}, 10000);
 }
 
+//this function calculates the average latency for a specific node to avoid punctual fluctuations
 function averageLatency_daemon(){
 	var nodos = [];
 	var interval = setInterval(function() {
-		for (var i = 0; i<latency.length; i++){
+		for (var i = 0; i<latency.length; i++){ // goes through the latency array to calculate the average for a specific node
 			var nodos = [];
 			var obj = JSON.parse(latency[i]);
 			var nodo =obj.nodo;
 			var lat = parseInt(obj.lat);
 			var tot = parseInt(obj.tot);
-			var lat_avg = lat/tot;
+			var lat_avg = lat/tot; // this value will be used to include it in metadata object for this node
 			latency.splice(i,1);
 			
 			
-			if(latency_avg.length == 0){
-						var nodo_obj = '';
-						nodo_obj = '{"nodo" : "';
-						nodo_obj = nodo_obj.concat(nodo);
-						nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
-						nodo_obj = nodo_obj.concat(lat_avg);
-						nodo_obj = nodo_obj.concat('"}');
-						latency_avg.push(nodo_obj);
-					}
-					else {
+			if(latency_avg.length == 0){ // if it is the very fist nodo, just push the "latency_avg" param
+				var nodo_obj = '';
+				nodo_obj = '{"nodo" : "';
+				nodo_obj = nodo_obj.concat(nodo);
+				nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
+				nodo_obj = nodo_obj.concat(lat_avg);
+				nodo_obj = nodo_obj.concat('"}');
+				latency_avg.push(nodo_obj);
+			}
+			else { // check if the nodo already exists and update the value or push a new object
 
-						for (var j = 0; j<latency_avg.length; j++){
-							var obj = JSON.parse(latency_avg[j]);
-							var nodo_aux = obj.nodo;
-							nodos.push(nodo_aux);
-						}
-						if (nodos.indexOf(nodo) != -1){ //existe ya en el array
+				for (var j = 0; j<latency_avg.length; j++){
+					var obj = JSON.parse(latency_avg[j]);
+					var nodo_aux = obj.nodo;
+					nodos.push(nodo_aux);
+				}
+				if (nodos.indexOf(nodo) != -1){ // already exists
 
-							latency_avg.splice(nodos.indexOf(nodo),1);
-							var nodo_obj = '';
-							nodo_obj = '{"nodo" : "';
-							nodo_obj = nodo_obj.concat(nodo);
-							nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
-							nodo_obj = nodo_obj.concat(lat_avg);
-							nodo_obj = nodo_obj.concat('"}');
-							latency_avg.push(nodo_obj);
-						}else{
-							var nodo_obj = '';
-							nodo_obj = '{"nodo" : "';
-							nodo_obj = nodo_obj.concat(nodo);
-							nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
-							nodo_obj = nodo_obj.concat(lat_avg);
-							nodo_obj = nodo_obj.concat('"}');
-							latency_avg.push(nodo_obj);	
-						}
-					}
+					latency_avg.splice(nodos.indexOf(nodo),1);
+					var nodo_obj = '';
+					nodo_obj = '{"nodo" : "';
+					nodo_obj = nodo_obj.concat(nodo);
+					nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
+					nodo_obj = nodo_obj.concat(lat_avg);
+					nodo_obj = nodo_obj.concat('"}');
+					latency_avg.push(nodo_obj);
+				}else{ // add new object to "latency_avg" param
+				
+					var nodo_obj = '';
+					nodo_obj = '{"nodo" : "';
+					nodo_obj = nodo_obj.concat(nodo);
+					nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
+					nodo_obj = nodo_obj.concat(lat_avg);
+					nodo_obj = nodo_obj.concat('"}');
+					latency_avg.push(nodo_obj);	
+				}
+			}
 		}
 	
-		
-	}, 30000);
+	}, 30000); // the average is calculated in a 30 seconds period
 }
 
 
 
-function getRandomInt(min, max) {
+function getRandomInt(min, max) { // just a function to calculate a random integer
   return Math.floor(Math.random() * (max - min)) + min;
 }
+
+// export the functions that are being used in app.js program
 
 exports.averageLatency_daemon = averageLatency_daemon;
 exports.clean_daemon = clean_daemon;
 exports.getModel_Meta = getModel_Meta;
 exports.request_daemon = request_daemon;
 exports.newConection = newConection;
-exports.updateStatus = updateStatus;
 exports.Nodes = Nodes;
