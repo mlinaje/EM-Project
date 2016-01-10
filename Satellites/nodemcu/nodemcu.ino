@@ -37,9 +37,10 @@ int capacity = 7753728;
 int busy = 0;
 File root_2;
 int freeSpace = 0;
-int local_time = 0;
-int real_time = 0;
+long local_time = 0;
+long real_time = 0;
 int count = 0;
+String fixed_time;
 
 void setup() {
   Serial.begin(115200);
@@ -68,7 +69,6 @@ void setup_wifi() {
 }
   
 void callback(char* topic_in, byte* payload, unsigned int length) {
-  
   payload[length] = '\0';
   String payload_str = String((char*)payload);
   char payload_char[payload_str.length()+1];
@@ -91,7 +91,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
       String op_str(op);
           if (nodo_str == nodeID){
               if (op_str == "sub"){
-                  client.subscribe("Home/+/istate");
+                  client.subscribe("Home/+/istate", 1);
               }
               else {
                 if (op_str == "unsub"){
@@ -106,22 +106,24 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
      return;
   }
     if (channel == "time"){
-     real_time = payload_str.toInt();
+      fixed_time = payload_str.substring(0,6);
+      String var_time = payload_str.substring (6);
+     real_time = var_time.toInt();
      local_time = millis();
      return;
   }
   if (channel == "model_req"){
-     client.publish("Home/2/model","{\"nodo\":\"2\",\"time\":\"s\",\"mem\":\"Mb\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
+     client.publish("Home/2/model","{\"nodo\":\"2\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
      return; 
   }    
   if (channel == "istate")
-  {  
-      StaticJsonBuffer<200> jsonBuffer2;
-      JsonObject& root2 = jsonBuffer2.parseObject(payload_char);    
+  {
+      StaticJsonBuffer<500> jsonBuffer2;
+      JsonObject& root2 = jsonBuffer2.parseObject(payload_char);
+
       if (!root2.success()) {;
         return;
       }
-
       const char* nodo = root2["nodo"];
       String nodo_str(nodo);
       if(nodo_str.length() == 0){
@@ -163,7 +165,7 @@ void reconnect() {
       client.subscribe("Home/2/request");
       client.subscribe("Home/nodo_central/time");
       client.subscribe("Home/2/model_req");
-      client.publish("Home/2/model","{\"nodo\":\"2\",\"time\":\"s\",\"mem\":\"Gb\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
+      client.publish("Home/2/model","{\"nodo\":\"2\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
     } else {
       delay(5000);
     }
@@ -196,10 +198,12 @@ int leer_voltios(){
  return (batLevelInt);
 }
 
-int getTime(){
- int timestamp; 
- int current = millis();
- timestamp = real_time+(current-local_time);
+String getTime(){
+ String timestamp = fixed_time;
+ long time_aux;
+ long current = millis();
+ time_aux = real_time+(current-local_time);
+ timestamp = timestamp + time_aux;
  return (timestamp);
 
 }
@@ -210,15 +214,15 @@ void checkData (){
   t = dht.readTemperature(); //Se lee la temperatura
   String msg = "{\"temp\":\"";
   msg = msg + t;
-  msg = msg + "\",\"tmpU\":\"C\",\"hum\":\"";
+  msg = msg + "\",\"hum\":\"";
   msg = msg + h;
-  msg = msg + "\",\"humU\":\"%\",\"time\":\"";
+  msg = msg + "\",\"timestamp\":\"";
   msg = msg + getTime();
-  msg = msg + "\",\"timeU\":\"msec\"}";
+  msg = msg + "\"}";
 
   char *cstr = new char[msg.length() + 1];
   strcpy(cstr, msg.c_str());
-  client.publish("Home/2/istate",cstr);
+  client.publish("Home/2/istate",cstr, 1);
   delete [] cstr;
 
   msg = "{\"mem\":\"";
@@ -230,7 +234,7 @@ void checkData (){
   strcpy(cstr_1, msg.c_str());
   client.publish("Home/2/meta",cstr_1);
   delete [] cstr_1;
-  
+  client.publish("Home/2/istate","{\"nodo\":\"2\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}", 1);
   }
 
 
