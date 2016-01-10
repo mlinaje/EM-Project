@@ -107,7 +107,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
   }
     if (channel == "time"){
      real_time = payload_str.toInt();
-     local_time = millis()/1000;
+     local_time = millis();
      return;
   }
   if (channel == "model_req"){
@@ -198,7 +198,7 @@ int leer_voltios(){
 
 int getTime(){
  int timestamp; 
- int current = millis()/1000;
+ int current = millis();
  timestamp = real_time+(current-local_time);
  return (timestamp);
 
@@ -213,8 +213,8 @@ void checkData (){
   msg = msg + "\",\"tmpU\":\"C\",\"hum\":\"";
   msg = msg + h;
   msg = msg + "\",\"humU\":\"%\",\"time\":\"";
-  msg = msg + getTime();
-  msg = msg + "\"}";
+  msg = msg + getTime();;
+  msg = msg + "\",\"timeU\":\"msec\"}";
 
   char *cstr = new char[msg.length() + 1];
   strcpy(cstr, msg.c_str());
