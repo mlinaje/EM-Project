@@ -10,15 +10,15 @@ child, child1;
 
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
-var nodeID = "nodo_1_1"
+var nodeID = "11"
 var proc = 1000;
 var client;
 var topic_ctrl = "Home/nodo_central/ctrl";
-var topic_model_req = "Home/nodo_1_1/model_req";
-var topic_request = "Home/nodo_1_1/request";
-var topic_reply = "Home/nodo_1_1/reply";
-var topic_model = "Home/nodo_1_1/model";
-var model_stg = "{\"nodo\":\"nodo_1_1\",\"mem\":\"Kb\",\"proc\":\"noUnit\",\"timestamp\":\"s\",\"cpu_usage\":\"%\",\"swap\":\"Kb\",\"loadavg\":\"noUnit\",\"batt\":\"noUnit\",\"power\":\"noUnit\",\"freeRAM\":\"Kb\"}";
+var topic_model_req = "Home/11/model_req";
+var topic_request = "Home/11/request";
+var topic_reply = "Home/11/reply";
+var topic_model = "Home/11/model";
+var model_stg = "{\"nodo\":\"11\",\"mem\":\"Kb\",\"proc\":\"noUnit\",\"timestamp\":\"s\",\"cpu_usage\":\"%\",\"swap\":\"Kb\",\"loadavg\":\"noUnit\",\"batt\":\"noUnit\",\"power\":\"noUnit\",\"freeRAM\":\"Kb\"}";
 
 
 var free_stg;
@@ -70,7 +70,6 @@ function main_callback (){
 		
 		var nodos = [];
 		var topic_str = topic_aux.toString();
-		topic_aux = topic_aux.substring(1);
 		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/'));
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
 		
@@ -78,11 +77,11 @@ function main_callback (){
 		var msg = JSON.parse(message.toString());		
 		if (msg.nodo == nodeID){
 			if (msg.op == "sub"){
-			client.subscribe({"Home/+/storage" : 1});
+			client.subscribe({"Home/+/istate" : 1});
 			}
 			else{
 				if (msg.op == "unsub"){
-					client.unsubscribe("Home/+/storage");
+					client.unsubscribe("Home/+/istate");
 				}
 			}
 		}
@@ -99,7 +98,7 @@ function main_callback (){
 			client.publish(topic_model, model_stg);
 		}
 		
-		if (channel == "storage"){
+		if (channel == "istate"){
 			//Connect to the db
 			MongoClient.connect("mongodb://localhost:27017/nodo_1_1_db", function(err, db) {
 			  if(err) { return console.dir(err); }
@@ -112,12 +111,11 @@ function main_callback (){
 				}else{
 					var document= "model_";
 					document = document.concat(nodo);
-					var now = new Date();
-					var milis = now.getTime();
+					var milis = new Date().getTime();
 					obj["time"] = milis;
 					db.collection(document).insert(obj);				
 				}
-
+				db.close();
 			});
 			
 		}
@@ -271,7 +269,7 @@ function main_loop(){
 	var interval = setInterval(function() {
 
 		updateStatus("meta", nodeID, checkMetadata(), 0);
-		updateStatus("storage", nodeID, checkResources(), 1);
+		updateStatus("istate", nodeID, checkResources(), 1);
 
 	}, 5000);
 }
@@ -279,7 +277,7 @@ function main_loop(){
 function loop_model(){
 	var interval = setInterval(function() {
 		
-		updateStatus("storage", nodeID, model_stg, 1);
+		updateStatus("istate", nodeID, model_stg, 1);
 	
 	}, 20000);
 }
