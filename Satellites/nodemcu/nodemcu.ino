@@ -213,7 +213,7 @@ void checkData (){
   msg = msg + "\",\"tmpU\":\"C\",\"hum\":\"";
   msg = msg + h;
   msg = msg + "\",\"humU\":\"%\",\"time\":\"";
-  msg = msg + getTime();;
+  msg = msg + getTime();
   msg = msg + "\",\"timeU\":\"msec\"}";
 
   char *cstr = new char[msg.length() + 1];
