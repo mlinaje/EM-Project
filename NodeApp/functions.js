@@ -21,6 +21,7 @@ var client;
 var topic_model = "Home/+/model";
 var topic_meta = "Home/+/meta";
 var topic_reply = "Home/+/reply";
+var topic_query = "Home/+/query";
 var NodosModel = [];
 var Nodos_gl = [];
 var NodosMeta = [];
@@ -90,7 +91,7 @@ function getModel_Meta (){
 	client.subscribe(topic_model);	// subscription to the topic that receive the data model from every node
 	client.subscribe(topic_meta);	// subscription to the topic that receive the information parameters from every node
 	client.subscribe(topic_reply);	// this subscriptin is used to receive the replies to the requests to calculate the delay param
-	
+	client.subscribe(topic_query);  // subscription to query topic
 
 	// If the app recevie a mqtt message from one of the topics above
 	client.on('message', function (topic_aux, message) {
@@ -294,6 +295,16 @@ function getModel_Meta (){
 				nodos = [];
 			}
 			
+			if (channel == "query"){
+				
+			console.log(nodo);
+			var q_obj = JSON.parse(message.toString());
+			console.log(q_obj.param);
+			console.log(q_obj.nodo);
+			console.log(q_obj.timestamp);
+				
+			}
+	
 		db.close();
 		});	
 	});
@@ -323,13 +334,6 @@ function Nodes (){
 	
 	getNodes (parameters);	// calling to the function that really calculates the nodes
 	
-	// cleaning the parameter array
-	Mem = []; 
-	Proc = []; 
-	Batt = []; 
-	Lat = []; 
-	Power = [];
-	FreeRAM = [];
 };
 
 // this fuction search the unit for a specific parameter that belongs to a specific node
@@ -459,7 +463,7 @@ function getNodes (param){
 	{
 		for(var i = 0; i < Mem.length; i++){ // through the loop to get the part that provides memory
 			aux[i] = (Mem[i]/Math.max.apply(null,Mem))*weightMem; // calculates the percentage and multiply it by the weight
-			result [i] = 0; // because of it is the fist
+			result [i] = 0; // because of it is the fist one
 			result [i] = result [i] + aux[i]; //added to the result for this specific node
 		}
 	}
@@ -530,14 +534,21 @@ function getNodes (param){
 	}
 	else { // we want to have grater number of storage nodes than we have
 		for (var i = 0; i < result.length; i++){
-			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]); // adds the node with better punctuation
+			nextStgNodes.push(Nodos_gl[result.indexOf(Math.max.apply(null,result))]); // adds the node with better score
 			Nodos_gl.splice(result.indexOf(Math.max.apply(null,result)), 1); // delete the previous node for nodos_gl array 
 			result.splice(result.indexOf(Math.max.apply(null,result)), 1); // delete the previus node for result array 
 		}
 	}
 	updateStgNodes(nextStgNodes); // communicates  which nodes have to store and which have not
 	Nodos_gl = [];
-	nextStgNodes = [];	
+	nextStgNodes = [];
+	// cleaning the parameter array
+	Mem = []; 
+	Proc = []; 
+	Batt = []; 
+	Lat = []; 
+	Power = [];
+	FreeRAM = [];
 }
 
 
@@ -641,7 +652,7 @@ function clean_daemon(){
 					var obj_model = JSON.parse(NodosModel[j]);
 					var keys_nodes = Object.keys(obj_model);
 					if (nodo == keys_nodes[0]){					
-						NodosModel.splice(i,1); // the metadata for this node is removed
+						NodosModel.splice(i,1); // the model for this node is removed
 						break;
 					}
 				}
