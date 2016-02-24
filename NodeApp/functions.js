@@ -14,6 +14,7 @@ var path = require('path'); // This package is usefull to create the mqtt topcis
 var bunyan = require('bunyan'); // This package is used like debugger
 var MongoClient = require('mongodb').MongoClient; // to storage the information it is used a mongodb database
 
+ 
 // Global variables
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = 'Home';
@@ -29,6 +30,7 @@ var currentStgNodes = [];
 var requests = [];
 var latency = [];
 var latency_avg = [];
+var url = 'mongodb://localhost:27017/nodo_1_db';
 
 var Mem = []; //array that contains the memory param for every node
 
@@ -95,14 +97,15 @@ function getModel_Meta (){
 
 	// If the app recevie a mqtt message from one of the topics above
 	client.on('message', function (topic_aux, message) {
+		topic_aux = topic_aux.substring(1);	
+		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/')); //parsing the node
+		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );	//parsing the channel
 		//Connect to the db to storage the data
-		MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
+		MongoClient.connect(url, function(err, db) {
 			if(err) { return console.dir(err); }
 			var nodos = [];
-			var topic_str = topic_aux.toString(); //byte to string topic change
-			topic_aux = topic_aux.substring(1);	
-			var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/')); //parsing the node
-			var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );	//parsing the channel
+			//var topic_str = topic_aux.toString(); //byte to string topic change
+			
 
 			//if the communication channel is "model"
 			if (channel == "model"){
@@ -295,18 +298,43 @@ function getModel_Meta (){
 				nodos = [];
 			}
 			
-			if (channel == "query"){
-				
-			console.log(nodo);
-			var q_obj = JSON.parse(message.toString());
-			console.log(q_obj.param);
-			console.log(q_obj.nodo);
-			console.log(q_obj.timestamp);
-				
-			}
-	
 		db.close();
-		});	
+		});
+		
+		if (channel == "query"){	
+			var nodo_src = nodo;
+			var q_obj = JSON.parse(message.toString());
+			var param = q_obj.param;
+			var nodo_dst = q_obj.nodo;
+			var gt = parseInt(q_obj.timeInit);
+			var lt = parseInt(q_obj.timeEnd);
+			
+		// Use connect method to connect to the Server
+			MongoClient.connect(url, function (err, db) {
+			if (err) {
+				console.log('Unable to connect to the mongoDB server. Error:', err);
+			} else {
+				//HURRAY!! We are connected. :)
+				console.log('Connection established to', url);
+
+				// Get the documents collection
+			var collection = db.collection('nodes');
+
+			// Insert some users
+			collection.find({"time" : {$gt: gt, $lt: lt }}).toArray(function (err, result) {
+			  if (err) {
+				console.log(err);
+			  } else if (result.length) {
+				console.log('Found:', result);
+			  } else {
+				console.log('No document(s) found with defined "find" criteria!');
+			  }
+			  //Close connection
+			  db.close();
+			});
+		  }
+		});
+		}
 	});
 	
 }
@@ -584,7 +612,7 @@ function updateStgNodes (nextStgNodes){
 	}
 
 	//Connects to the db to store the current storage nodes and the timestamp associated
-	MongoClient.connect("mongodb://localhost:27017/nodo_1_db", function(err, db) {
+	MongoClient.connect(url, function(err, db) {
 		if(err) { return console.dir(err); }
 		
 		var obj = JSON.parse('{}');
