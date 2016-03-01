@@ -322,13 +322,32 @@ function getModel_Meta (){
 
 			// Insert some users
 			collection.find({"time" : {$gt: gt, $lt: lt }}).toArray(function (err, result) {
+			
+			var total_stg_nodes = [];
+			
 			  if (err) {
 				console.log(err);
 			  } else if (result.length) {
-				console.log('Found:', result);
+				//console.log('Found:', result);
+			 console.log("valores: ")
+			 
+			 for (var i = 0; i<result.length; i++){
+			
+				var json = result[i];
+				var stg_nodes = json.stg_nodes;
+			    for (var j = 0; j<stg_nodes.length; j++){
+			
+				if(total_stg_nodes.indexOf(stg_nodes[j]) == -1){ // If the node is not in the list of current storage nodes, it is included
+					total_stg_nodes.push(stg_nodes[j]);
+				}
+					
+				}
+			 }
+			   console.log(total_stg_nodes);
 			  } else {
 				console.log('No document(s) found with defined "find" criteria!');
 			  }
+			  
 			  //Close connection
 			  db.close();
 			});
