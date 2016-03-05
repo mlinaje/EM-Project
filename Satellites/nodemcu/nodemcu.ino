@@ -53,7 +53,6 @@ void setup() {
     return;
   }
    root_2 = SD.open("/");
-   // user_init();
 }
 
 void setup_wifi() {
@@ -153,19 +152,25 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
             myFile.close();
       }
   }
+  if (channel == "r_query"){
+    Serial.println("nodo");
+    Serial.println(nodoTopic);
+    
+    }
 }
 
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
     // Attempt to connect
-    if (client.connect("ESP8266Client")) {
+    if (client.connect("Nodo_2")) {
       // ... and resubscribe
       client.subscribe("Home/nodo_central/ctrl");
       client.subscribe("Home/2/request");
       client.subscribe("Home/nodo_central/time");
       client.subscribe("Home/2/model_req");
       client.publish("Home/2/model","{\"nodo\":\"2\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
+      client.subscribe("Home/+/r_query");
     } else {
       delay(5000);
     }
