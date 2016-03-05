@@ -157,14 +157,12 @@ function getModel_Meta (){
 			
 			//if the communication channel is "meta"
 			if (channel == "meta"){
-
 				for (var i = 0; i<NodosModel.length; i++){ // get all the node names in "model" array
 					var obj = JSON.parse(NodosModel[i]);
 					var nodo_aux = Object.keys(obj)[0];
 					nodos.push(nodo_aux);
 				}	
 				if (nodos.indexOf(nodo) == -1){ // if the node exists in "model" array but does not in meta, request the meta data
-				
 					var topic = 'Home/';
 					topic = topic.concat(nodo);
 					topic = topic.concat('/model_req');	
@@ -241,16 +239,16 @@ function getModel_Meta (){
 					
 					if (token_aux == token){ // now the token is used
 						var time = obj.time; //time when the request was send
-						var nodo = obj.nodo;
+						var _nodo = obj.nodo;
 						var now = new Date();
 						var milis = now.getTime(); //current time
 						var dif = milis - time;	// latency 
 						
-						// the latency array is used to calculate the latency average in averageLatency_daemon function
+						//the latency array is used to calculate the latency average in averageLatency_daemon function
 						if(latency.length == 0){ // if the array is empty, push the node latency data the very first time
 							var nodo_obj = '';
 							nodo_obj = '{"nodo" : "';
-							nodo_obj = nodo_obj.concat(nodo);
+							nodo_obj = nodo_obj.concat(_nodo);
 							nodo_obj = nodo_obj.concat('", "lat" : "'); 
 							nodo_obj = nodo_obj.concat(dif); // latency for one reply
 							nodo_obj = nodo_obj.concat('", "tot" : "1" }'); //number of the replies to calculate the average
@@ -263,16 +261,16 @@ function getModel_Meta (){
 								var nodo_aux = obj.nodo;
 								nodos.push(nodo_aux);
 							}
-							if (nodos.indexOf(nodo) != -1){ // the node exists so the values are updated
+							if (nodos.indexOf(_nodo) != -1){ // the node exists so the values are updated
 
-								var obj = JSON.parse(latency[nodos.indexOf(nodo)]);
+								var obj = JSON.parse(latency[nodos.indexOf(_nodo)]);
 								var lat = obj.lat;
 								var lat_total = parseInt(lat) + dif; // the app added all the latency param to calculate the average with "tot" param
 								var tot = parseInt(obj.tot) + 1; // add by one each time a new latency value is added
 								
-								latency.splice(nodos.indexOf(nodo),1); //delete the current data and create the new one
+								latency.splice(nodos.indexOf(_nodo),1); //delete the current data and create the new one
 								nodo_obj = '{"nodo" : "';
-								nodo_obj = nodo_obj.concat(nodo);
+								nodo_obj = nodo_obj.concat(_nodo);
 								nodo_obj = nodo_obj.concat('", "lat" : "'); 
 								nodo_obj = nodo_obj.concat(lat_total);
 								nodo_obj = nodo_obj.concat('", "tot" : "');
@@ -282,7 +280,7 @@ function getModel_Meta (){
 							}else{ // if the node does not exist, just push the new one
 								var nodo_obj = '';
 								nodo_obj = '{"nodo" : "';
-								nodo_obj = nodo_obj.concat(nodo);
+								nodo_obj = nodo_obj.concat(_nodo);
 								nodo_obj = nodo_obj.concat('", "lat" : "'); 
 								nodo_obj = nodo_obj.concat(dif);
 								nodo_obj = nodo_obj.concat('", "tot" : "1" }');
@@ -309,18 +307,18 @@ function getModel_Meta (){
 			var gt = parseInt(q_obj.timeInit);
 			var lt = parseInt(q_obj.timeEnd);
 			
-		// Use connect method to connect to the Server
+		//	Use connect method to connect to the Server
 			MongoClient.connect(url, function (err, db) {
 			if (err) {
 				console.log('Unable to connect to the mongoDB server. Error:', err);
 			} else {
-				//HURRAY!! We are connected. :)
+			//	HURRAY!! We are connected. :)
 				console.log('Connection established to', url);
 
-				// Get the documents collection
+			//	Get the documents collection
 			var collection = db.collection('nodes');
 
-			// Insert some users
+			//Insert some users
 			collection.find({"time" : {$gt: gt, $lt: lt }}).toArray(function (err, result) {
 			
 			var total_stg_nodes = [];
@@ -366,7 +364,7 @@ function getModel_Meta (){
 				console.log('No document(s) found with defined "find" criteria!');
 			  }
 			  
-			  //Close connection
+			 // Close connection
 			  db.close();
 			});
 		  }
