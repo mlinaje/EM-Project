@@ -344,6 +344,24 @@ function getModel_Meta (){
 				}
 			 }
 			   console.log(total_stg_nodes);
+			   console.log(q_obj);
+			   var query_id = getRandomInt(1000,10000);	
+			   q_obj["query_id"] = query_id;
+			   console.log(q_obj);
+			   var nodes = "";
+			   for (var i = 0; i<total_stg_nodes.length; i++){
+				   nodes = nodes.concat(total_stg_nodes[i]);
+				   nodes = nodes.concat("-");
+			   }
+			   nodes = nodes.substring(0, nodes.length - 1);			   
+				var topic = 'Home/'; // topic is created with the node name
+				topic = topic.concat(nodes);
+				topic = topic.concat('/r_query');
+				console.log(topic);
+				var stg_query = JSON.stringify(q_obj); // creation of the json object
+				client.publish(topic,stg_query); // the query is published
+				
+			   
 			  } else {
 				console.log('No document(s) found with defined "find" criteria!');
 			  }
