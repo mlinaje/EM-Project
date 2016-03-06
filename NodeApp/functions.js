@@ -348,10 +348,10 @@ function getModel_Meta (){
 			   console.log(q_obj);
 			   var nodes = "";
 			   for (var i = 0; i<total_stg_nodes.length; i++){
+				   nodes = nodes.concat("<");
 				   nodes = nodes.concat(total_stg_nodes[i]);
-				   nodes = nodes.concat("-");
-			   }
-			   nodes = nodes.substring(0, nodes.length - 1);			   
+				   nodes = nodes.concat(">");
+			   }			   
 				var topic = 'Home/'; // topic is created with the node name
 				topic = topic.concat(nodes);
 				topic = topic.concat('/r_query');
