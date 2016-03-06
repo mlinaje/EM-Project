@@ -23,6 +23,7 @@ const char* ssid = "My_AP";
 const char* password = "raspberry";
 const char* mqtt_server = "192.168.42.1";
 File myFile;
+File myFileRead;
 WiFiClient espClient;
 PubSubClient client(espClient);
 char *status_sensors;
@@ -153,9 +154,72 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
       }
   }
   if (channel == "r_query"){
-    Serial.println("nodo");
-    Serial.println(nodoTopic);
-    
+    int pos = nodoTopic.indexOf("<2>");
+    if ( pos == -1 ){
+      }else{
+         StaticJsonBuffer<200> jsonBuffer3;
+        JsonObject& root3 = jsonBuffer3.parseObject(payload_char);
+        
+        if (!root3.success()) {
+        return;
+      }
+      const char* nodo = root3["nodo"];
+      String nodo_str(nodo);
+      const char* par = root3["param"];
+      String par_str(par);
+      const char* gt = root3["timeInit"];
+      String gt_str(gt);
+      const char* lt = root3["timeEnd"];
+      String lt_str(lt);
+      const char* q_id = root3["query_id"];
+      String q_id_str(q_id);
+
+      String filename = "META_";
+      filename = filename + nodo_str;
+      filename = filename + ".TXT";
+
+        char *cstr_name = new char[filename.length()];
+        strcpy(cstr_name, filename.c_str());
+
+        if (SD.exists(cstr_name)) {
+          Serial.println("it exists.");
+           myFileRead = SD.open(cstr_name);
+           if (myFileRead) {
+           while (myFileRead.available()) {
+            String line = myFileRead.readStringUntil('\n');
+            
+                StaticJsonBuffer<200> jsonBuffer4;
+                JsonObject& root4 = jsonBuffer4.parseObject(line);
+                if (!root4.success()) {
+                continue;
+                }
+                const char* tmp_v = root4["timestamp"];
+                String tmp_v_str(tmp_v);
+                if(tmp_v_str.toInt()>= gt_str.toInt() && tmp_v_str.toInt()<= lt_str.toInt()){
+                    const char* param_v = root4[par];
+                    String param_v_str(param_v);
+                    
+                    String msg = "{\"val\":\"";
+                      msg = msg + param_v_str;
+                      msg = msg + "\",\"timestamp\":\"";
+                      msg = msg + tmp_v_str;
+                      msg = msg + "\",\"query_id\":\"";
+                      msg = msg + q_id_str;
+                      msg = msg + "\"}";
+                      char *cstr_msg = new char[msg.length() + 1];
+                      strcpy(cstr_msg, msg.c_str());
+                      client.publish("Home/2/q_reply",cstr_msg);
+                      delete [] cstr_msg;
+
+                }
+           }
+          }
+          
+        } else {
+          Serial.println("it doesn't exist.");
+        }
+          delete [] cstr_name;
+        }
     }
 }
 
