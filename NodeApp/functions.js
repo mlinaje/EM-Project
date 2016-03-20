@@ -23,13 +23,18 @@ var topic_model = "Home/+/model";
 var topic_meta = "Home/+/meta";
 var topic_reply = "Home/+/reply";
 var topic_query = "Home/+/query";
+var topic_r_query = "Home/+/q_reply";
 var NodosModel = [];
 var Nodos_gl = [];
 var NodosMeta = [];
+var Queries = [];
+var r_Queries = [];
+var query_attempt = [];
 var currentStgNodes = [];
 var requests = [];
 var latency = [];
 var latency_avg = [];
+var eof = [];
 var url = 'mongodb://localhost:27017/nodo_1_db';
 
 var Mem = []; //array that contains the memory param for every node
@@ -94,6 +99,7 @@ function getModel_Meta (){
 	client.subscribe(topic_meta);	// subscription to the topic that receive the information parameters from every node
 	client.subscribe(topic_reply);	// this subscriptin is used to receive the replies to the requests to calculate the delay param
 	client.subscribe(topic_query);  // subscription to query topic
+	client.subscribe(topic_r_query); // subscription to receive the replies to the queries
 
 	// If the app recevie a mqtt message from one of the topics above
 	client.on('message', function (topic_aux, message) {
@@ -299,7 +305,7 @@ function getModel_Meta (){
 		db.close();
 		});
 		
-		if (channel == "query"){	
+		if (channel == "query"){
 			var nodo_src = nodo;
 			var q_obj = JSON.parse(message.toString());
 			var param = q_obj.param;
@@ -307,68 +313,197 @@ function getModel_Meta (){
 			var gt = parseInt(q_obj.timeInit);
 			var lt = parseInt(q_obj.timeEnd);
 			
-		//	Use connect method to connect to the Server
-			MongoClient.connect(url, function (err, db) {
-			if (err) {
-				console.log('Unable to connect to the mongoDB server. Error:', err);
-			} else {
-			//	HURRAY!! We are connected. :)
-				console.log('Connection established to', url);
+			//	Use connect method to connect to the Server
+				MongoClient.connect(url, function (err, db) {
+				if (err) {
+					console.log('Unable to connect to the mongoDB server. Error:', err);
+				} else {
+				//	HURRAY!! We are connected. :)
+					console.log('Connection established to', url);
 
-			//	Get the documents collection
-			var collection = db.collection('nodes');
+				//	Get the documents collection
+				var collection = db.collection('nodes');
 
-			//Insert some users
-			collection.find({"time" : {$gt: gt, $lt: lt }}).toArray(function (err, result) {
-			
-			var total_stg_nodes = [];
-			
-			  if (err) {
-				console.log(err);
-			  } else if (result.length) {
-				//console.log('Found:', result);
-			 console.log("valores: ")
-			 
-			 for (var i = 0; i<result.length; i++){
-			
-				var json = result[i];
-				var stg_nodes = json.stg_nodes;
-			    for (var j = 0; j<stg_nodes.length; j++){
-			
-				if(total_stg_nodes.indexOf(stg_nodes[j]) == -1){ // If the node is not in the list of current storage nodes, it is included
-					total_stg_nodes.push(stg_nodes[j]);
-				}
-					
-				}
-			 }
-			   console.log(total_stg_nodes);
-			   console.log(q_obj);
-			   var query_id = getRandomInt(1000,10000);	
-			   q_obj["query_id"] = query_id;
-			   console.log(q_obj);
-			   var nodes = "";
-			   for (var i = 0; i<total_stg_nodes.length; i++){
-				   nodes = nodes.concat("<");
-				   nodes = nodes.concat(total_stg_nodes[i]);
-				   nodes = nodes.concat(">");
-			   }			   
-				var topic = 'Home/'; // topic is created with the node name
-				topic = topic.concat(nodes);
-				topic = topic.concat('/r_query');
-				console.log(topic);
-				var stg_query = JSON.stringify(q_obj); // creation of the json object
-				client.publish(topic,stg_query); // the query is published
+				//Insert some users
+				collection.find({"time" : {$gt: gt, $lt: lt }}).toArray(function (err, result) {
 				
-			   
-			  } else {
-				console.log('No document(s) found with defined "find" criteria!');
+					var total_stg_nodes = [];
+				
+				  if (err) {
+					console.log(err);
+				  } else if (result.length) {
+					//console.log('Found:', result);
+				 
+				 for (var i = 0; i<result.length; i++){
+				
+					var json = result[i];
+					var stg_nodes = json.stg_nodes;
+					for (var j = 0; j<stg_nodes.length; j++){
+				
+					if(total_stg_nodes.indexOf(stg_nodes[j]) == -1){ // If the node is not in the list of current storage nodes, it is included
+						total_stg_nodes.push(stg_nodes[j]);
+					}
+						
+					}
+				 }
+				   var query_id = getRandomInt(1000,10000);	
+				   q_obj["query_id"] = query_id;
+				   var nodes = "";
+				   var nodes_array = [];
+				   for (var i = 0; i<total_stg_nodes.length; i++){
+					   nodes = nodes.concat("<");
+					   nodes = nodes.concat(total_stg_nodes[i]);
+					   nodes = nodes.concat(">");
+					   nodes_array.push(total_stg_nodes[i]);
+				   }
+
+					var topic = 'Home/'; // topic is created with the node name
+					topic = topic.concat(nodes);
+					topic = topic.concat('/r_query');
+					var stg_query = JSON.stringify(q_obj); // creation of the json object
+					var query_obj = '';
+					query_obj = '{"nodo" : "';
+					query_obj = query_obj.concat(nodo_dst);
+					query_obj = query_obj.concat('", "param" : "'); 
+					query_obj = query_obj.concat(param);
+					query_obj = query_obj.concat('", "q_nodes" : "'); 
+					query_obj = query_obj.concat(nodes_array);					
+					query_obj = query_obj.concat('", "q_id" : "'); 
+					query_obj = query_obj.concat(query_id);
+					query_obj = query_obj.concat('", "nodo_src" : "'); 
+					query_obj = query_obj.concat(nodo_src); 					
+					query_obj = query_obj.concat('"}'); 
+					Queries.push(query_obj);
+					client.publish(topic,stg_query); // the query is published
+					var now = new Date();
+					var milis = now.getTime();
+					r_Queries.push(stg_query);
+					
+					for (var i = 0; i < nodes_array.length; i++ ) {
+						
+					query_obj = '{"nodo" : "';
+					query_obj = query_obj.concat(nodes_array[i]);
+					query_obj = query_obj.concat('", "timestamp" : "'); 
+					query_obj = query_obj.concat(milis);					
+					query_obj = query_obj.concat('", "q_id" : "'); 
+					query_obj = query_obj.concat(query_id);
+					query_obj = query_obj.concat('", "attempt" : "0"}'); 	
+					
+					query_attempt.push(query_obj);
+					
+					}
+				   
+				  } else {
+					console.log('No document(s) found with defined "find" criteria!');
+				  }
+				  
+				 // Close connection
+				  db.close();
+				});
 			  }
-			  
-			 // Close connection
-			  db.close();
 			});
-		  }
-		});
+		}
+		
+		if (channel == "q_reply"){
+			
+			var q_obj = JSON.parse(message.toString());
+			var q_id = q_obj.query_id;
+			var timestamp = q_obj.timestamp;
+			var val = q_obj.val;
+			var collection_name = "coll_";
+			collection_name = collection_name.concat(q_id);
+			delete q_obj["query_id"];
+
+			if(val == "eof"){
+				var node_r = q_obj.node;
+				var query = searchQuery(q_id);
+				var r_nodes = query[2];
+				var nodo_src = query[3];
+				var n = r_nodes.indexOf(nodo);
+				var nodes_array = [];
+				nodes_array = r_nodes.split(",");
+
+				if (n !== -1){
+	
+					var s_eof = '{"nodo" : "'; 
+					s_eof = s_eof.concat(nodo);
+					s_eof = s_eof.concat('", "q_id" : "');
+					s_eof = s_eof.concat(q_id);
+					s_eof = s_eof.concat('"}');
+					eof.push(s_eof);
+					deleteAttempt(q_id,nodo);
+				}
+				
+				var eoq = false;
+				for(var i = 0; i<nodes_array.length; i++){
+					
+					var _eof = searchEof(q_id,nodes_array[i])
+					if (_eof === false){break;}
+					else{eoq = true};
+				}
+				
+				if (eoq == true){
+					console.log("end of file");
+					var topic = 'Home/'; // topic is created with the node name
+					topic = topic.concat(nodo_src);
+					topic = topic.concat('/response');
+					//	Use connect method to connect to the Server
+					MongoClient.connect(url, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+
+						//	Get the documents collection
+						var collection = db.collection(collection_name);
+
+						collection.find().sort({"timestamp": 1}).toArray(function (err, result) {
+					
+						  if (err) {
+							console.log(err);
+						  } else if (result.length) {
+							console.log('Found:', result);
+							for (var i=0; i<result.length; i++){
+								delete result[i]._id;
+								var stg_result = JSON.stringify(result[i]);
+								client.publish(topic,stg_result);
+								
+							}
+							collection.drop();
+						  } else {
+							console.log('No document(s) found with defined "find" criteria!');
+						  }
+						  
+						 // Close connection
+						  db.close();
+						});
+					  }
+					});
+					cleanUp(q_id);	
+				}
+			
+			}
+			else{
+				var query = searchQuery(q_id);
+				var r_nodo = query[0];
+				var param = query[1];
+				var unit = searchUnit (r_nodo,param); // unit for that param
+				q_obj["nodo"] = r_nodo;
+				q_obj["param"] = param;
+				q_obj["unit"] = unit;
+				
+				//console.log(q_obj);
+				MongoClient.connect(url, function (err, db) {
+					if (err) {
+						console.log('Unable to connect to the mongoDB server. Error:', err);
+					} else {
+						//HURRAY!! We are connected. :)
+						//console.log('Connection established to', url);
+						db.collection(collection_name).update({"timestamp": timestamp}, q_obj, {upsert: true});
+					}
+					
+				db.close();
+				});
+			}
 		}
 	});
 	
@@ -412,6 +547,78 @@ function searchUnit (nodo,param){
 	return unit;
 };
 
+function searchQuery (query_id){
+	
+	for (var i = 0; i<Queries.length; i++){
+		var obj = JSON.parse(Queries[i]);
+		if (obj.q_id == query_id ){
+			var nodo = obj.nodo;
+			var param = obj.param;
+			var nodes = obj.q_nodes;
+			var nodo_src = obj.nodo_src;
+		}
+	}
+	
+	return [nodo, param, nodes, nodo_src];
+};
+
+
+function searchOriginalQuery (query_id) {
+	var query = '';
+	var index = 0;
+	for (var i = 0; i<r_Queries.length; i++){
+		var obj = JSON.parse(r_Queries[i]);
+		if (obj.query_id == query_id){
+			query = r_Queries[i];
+			index = i;
+			break;
+		}
+		
+	}
+	
+	return [query,index];
+	
+}
+function searchEof (query_id, nodo){
+	var _eof = false;
+	
+	for (var i = 0; i<eof.length; i++){
+		var obj = JSON.parse(eof[i]);
+		if (obj.q_id == query_id && obj.nodo == nodo){
+			_eof = true;
+			break;
+		}
+	}
+	
+	return _eof;
+};
+
+function deleteAttempt(query_id,nodo){
+	
+	for (var i = 0; i<query_attempt.length; i++){
+		var obj = JSON.parse(query_attempt[i]);
+		if (obj.q_id == query_id && obj.nodo == nodo){
+			query_attempt.splice(i,1);
+			break;
+		}
+	}
+}
+
+function cleanUp (query_id){
+	
+	for (var i = 0; i<Queries.length; i++){
+		var obj = JSON.parse(Queries[i]);
+		if (obj.q_id == query_id ){
+			Queries.splice(i,1);
+		}
+	}
+	for (var i = 0; i<eof.length; i++){
+		var obj = JSON.parse(eof[i]);
+		if (obj.q_id == query_id ){
+			eof.splice(i,1);
+		}
+	}
+};
 // this function change the values to a default value and group them in specific array to each parameter that is used in the app to calculate the sorage nodes
 function addParam (param, valu, unit){
 	switch(param)
@@ -794,6 +1001,49 @@ function time_daemon (){
 
 }
 
+function query_daemon (){
+
+	var interval = setInterval(function() {
+		
+	for (var i = 0; i<query_attempt.length; i++){
+		var obj = JSON.parse(query_attempt[i]);
+			var time = parseInt(obj.timestamp);
+			var attempt = parseInt(obj.attempt);
+			var nodo = obj.nodo;
+			var q_id = obj.q_id;
+			var now = new Date();
+			var milis = now.getTime();
+			var dif = milis - time;
+
+			if (dif > 4000){
+				var aux = searchOriginalQuery (q_id);
+				var query = aux [0];
+				var index = aux [1];
+				if (attempt < 1){
+					obj.attempt = attempt + 1;
+					var aux_obj = JSON.stringify(obj);
+					query_attempt[i]=aux_obj;										
+					var topic = 'Home/<'; // topic is created with the node name
+					topic = topic.concat(nodo);
+					topic = topic.concat('>/r_query');
+					client.publish(topic, query);
+				}else{
+					var s_eof = '{"nodo" : "'; 
+					s_eof = s_eof.concat(nodo);
+					s_eof = s_eof.concat('", "q_id" : "');
+					s_eof = s_eof.concat(q_id);
+					s_eof = s_eof.concat('"}');
+					eof.push(s_eof);
+					query_attempt.splice(i,1);
+					r_Queries.splice(index,1);
+				}
+			}
+	}
+		
+	}, 5000); 
+
+}
+
 function getRandomInt(min, max) { // just a function to calculate a random integer
   return Math.floor(Math.random() * (max - min)) + min;
 }
@@ -802,6 +1052,7 @@ function getRandomInt(min, max) { // just a function to calculate a random integ
 
 exports.averageLatency_daemon = averageLatency_daemon;
 exports.time_daemon = time_daemon;
+exports.query_daemon = query_daemon;
 exports.clean_daemon = clean_daemon;
 exports.getModel_Meta = getModel_Meta;
 exports.request_daemon = request_daemon;
