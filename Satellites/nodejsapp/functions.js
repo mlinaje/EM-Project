@@ -19,7 +19,9 @@ var topic_request = "Home/11/request";
 var topic_reply = "Home/11/reply";
 var topic_model = "Home/11/model";
 var model_stg = "{\"nodo\":\"11\",\"mem\":\"Kb\",\"proc\":\"noUnit\",\"timestamp\":\"s\",\"cpu_usage\":\"%\",\"swap\":\"Kb\",\"loadavg\":\"noUnit\",\"batt\":\"noUnit\",\"power\":\"noUnit\",\"freeRAM\":\"Kb\"}";
-
+var topic_query = "Home/+/r_query";
+var topic_query_reply = "Home/11/q_reply";
+var url_database = "mongodb://192.168.1.3:27017/nodo_1_1_db";
 
 var free_stg;
 var memFree;
@@ -58,6 +60,7 @@ function main_callback (){
 	client.subscribe(topic_ctrl);
 	client.subscribe(topic_model_req);
 	client.subscribe(topic_request);
+	client.subscribe(topic_query);
 	client.publish(topic_model, model_stg);
 	check_ram();
 	check_mem();
@@ -100,7 +103,7 @@ function main_callback (){
 		
 		if (channel == "istate"){
 			//Connect to the db
-			MongoClient.connect("mongodb://localhost:27017/nodo_1_1_db", function(err, db) {
+			MongoClient.connect(url_database, function(err, db) {
 			  if(err) { return console.dir(err); }
 				var obj = JSON.parse(message.toString());
 				if (obj.nodo == undefined){
@@ -118,6 +121,88 @@ function main_callback (){
 				db.close();
 			});
 			
+		}
+		
+		if (channel == "r_query"){
+			
+			var pos = topic_aux.indexOf('<11>');
+			
+			if (pos != -1){
+				
+				var q_obj = JSON.parse(message.toString());
+				var nodo = q_obj.nodo;
+				var par = q_obj.param;
+				var gt = q_obj.timeInit;
+				var lt = q_obj.timeEnd;
+				var q_id = q_obj.query_id;
+				var collection_name = "meta_";
+				collection_name = collection_name.concat(nodo);
+				MongoClient.connect(url_database, function (err, db) {
+						if (err) {
+							console.log('Unable to connect to the mongoDB server. Error:', err);
+						} else {
+
+						//	Get the documents collection
+						var collection = db.collection(collection_name);
+
+						collection.find({"timestamp" : {$gt: gt, $lt: lt }}).toArray(function (err, result) {
+					
+						  if (err) {
+							console.log(err);
+						  } else if (result.length) {
+							//console.log('Found:', result);
+										
+							for (var i=0; i<result.length; i++){
+								
+								switch(par)
+								{
+								case "mem":
+									var val = result[i].mem;
+									break;
+								case "swap":
+									var val = result[i].swap;
+									break;
+								case "cpu_usage":
+									var val = result[i].cpu_usage;
+									break;
+								case "loadavg":
+									var val = result[i].loadavg;
+									break;
+								case "freeRAM":
+									var val = result[i].freeRAM;
+									break;
+								default:
+									console.log("Parameter not found");
+								}
+								
+								var timestamp = result[i].timestamp;
+								var msg = '{"val" : "';
+								msg = msg.concat(val);
+								msg = msg.concat('", "timestamp" : "'); 
+								msg = msg.concat(timestamp);					
+								msg = msg.concat('", "query_id" : "'); 
+								msg = msg.concat(q_id);
+								msg = msg.concat('"}'); 
+					
+								client.publish(topic_query_reply,msg);
+								
+							}
+							
+							var msg_eof = '{"val" : "eof", "node" : "11", "query_id" : "';
+							msg_eof = msg_eof.concat(q_id);
+							msg_eof = msg_eof.concat('"}'); 
+							client.publish(topic_query_reply,msg_eof);
+
+						  } else {
+							console.log('No document(s) found with defined "find" criteria!');
+						  }
+						  
+						 // Close connection
+						  db.close();
+						});
+					  }
+					});
+			}
 		}
 	});
 
@@ -238,14 +323,16 @@ function check_swap (){
 function check_timestamp (){
 	var interval = setInterval (function(){
 		
-		child = exec("date +%s", function (error, stdout, stderr) {
-		if (error !== null) {
-			console.log('exec error: ' + error);
-		} else {
-			timestamp = parseInt(stdout);
+		// child = exec("date +%s", function (error, stdout, stderr) {
+		// if (error !== null) {
+			// console.log('exec error: ' + error);
+		// } else {
+			// timestamp = parseInt(stdout);
 		
-		}
-	  });	 
+		// }
+	  // });	
+	  
+		timestamp = new Date().getTime();
 		  
 	},1000);	
 }

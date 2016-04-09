@@ -1,5 +1,5 @@
 var app = require('./functions')
-	,host = '10.10.1.1' 
+	,host = '192.168.1.3' 
 	,port = 1883
 	,keepalive =10000;
 	
