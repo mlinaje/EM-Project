@@ -1,10 +1,9 @@
 var app = require('./functions')
-	,host = '127.0.0.1' // or localhost
-	,port = 1883
-	,keepalive =10000;
+
+// Global variables
+global.config = require('./conf/config');	
 	
-	
-app.newConection(port, host, keepalive);  
+app.newConection(parseInt(global.config.mqtt.port), global.config.mqtt.host, parseInt(global.config.mqtt.keepalive)); 
 
 app.getModel_Meta();
 app.request_daemon();

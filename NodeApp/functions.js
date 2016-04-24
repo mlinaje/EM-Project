@@ -8,6 +8,9 @@ This app belongs to Alfonso's End Master Proyect
 */
 "use strict";
 
+// Global variables
+global.config = require('./conf/config');
+
 // Import the required packages
 var mqtt = require('mqtt'); // Comunication protocol to comunicate with the nodes
 var path = require('path'); // This package is usefull to create the mqtt topcis
@@ -16,8 +19,11 @@ var MongoClient = require('mongodb').MongoClient; // to storage the information 
 
  
 // Global variables
+
+create_conf();
+
 var logger = bunyan.createLogger({name:'EMProyect'});
-var prefix = 'Home';
+var prefix = global.config.node.prefix;
 var client;
 var topic_model = "Home/+/model";
 var topic_meta = "Home/+/meta";
@@ -35,7 +41,7 @@ var requests = [];
 var latency = [];
 var latency_avg = [];
 var eof = [];
-var url = 'mongodb://localhost:27017/nodo_1_db';
+//var url = 'mongodb://localhost:27017/nodo_1_db';
 
 var Mem = []; //array that contains the memory param for every node
 
@@ -54,13 +60,13 @@ var FreeRAM = []; // array that contains the free RAM param for every node
 // The result of add all of them must be 1
 // The param numberNodes contain the number of nodes that will be use to storage the information
 var parameters = {
-	weightMem :"0.5",
-	weigthProc :"0.1",
+	weightMem :"0.1",
+	weigthProc :"0.5",
 	weigthBatt :"0.1",
 	weigthLat :"0.1",
 	weigthPower :"0.1",
 	weigthRAM: "0.1",
-	numberNodes: "1"
+	numberNodes: "2"
 };
 
 // This function create the connection to a MQTT Broker and show error message if needed
@@ -824,7 +830,9 @@ function getNodes (param){
 
 //This function is responsible for communicating to the nodes what to do
 function updateStgNodes (nextStgNodes){
-	
+	console.log("...................................");
+	console.log(nextStgNodes);
+	console.log("...................................");
 	//first, the application informs the nodes that they have to subscribe to the channel to which you all the information must be stored
 	for(var i = 0; i < nextStgNodes.length; i++){ 
 
@@ -997,7 +1005,7 @@ function time_daemon (){
 			client.publish("Home/nodo_central/time", millis.toString());
 
 		
-	}, 5000); // every 5 seconds the tiemestamp is sended
+	}, parseInt(global.config.node.send_time)); 
 
 }
 
@@ -1046,6 +1054,17 @@ function query_daemon (){
 
 function getRandomInt(min, max) { // just a function to calculate a random integer
   return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function create_conf (){
+
+global.url = "mongodb://";
+url = url.concat(global.config.db.host);
+url = url.concat(":");
+url = url.concat(global.config.db.port);
+url = url.concat("/");
+url = url.concat(global.config.db.database);
+
 }
 
 // export the functions that are being used in app.js program
