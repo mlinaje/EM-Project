@@ -1,27 +1,26 @@
 
 "use strict";
+// Global variables
+global.config = require('./conf/config');
 
 var mqtt = require('mqtt');
-var path = require('path');
 var bunyan = require('bunyan');
+var path = require('path'); // This package is usefull to create the mqtt topcis
 var MongoClient = require('mongodb').MongoClient;
 var exec = require('child_process').exec,
 child, child1;
 
 var logger = bunyan.createLogger({name:'EMProyect'});
-var prefix = 'Home';
-var nodeID = "11"
-var proc = 1000;
+var prefix = global.config.node.prefix;
+var nodeID = global.config.node.nodeID;
+var proc = parseInt(global.config.parameters.proc);
+
+create_conf();
+
 var client;
 var topic_ctrl = "Home/nodo_central/ctrl";
-var topic_model_req = "Home/11/model_req";
-var topic_request = "Home/11/request";
-var topic_reply = "Home/11/reply";
-var topic_model = "Home/11/model";
-var model_stg = "{\"nodo\":\"11\",\"mem\":\"Kb\",\"proc\":\"noUnit\",\"timestamp\":\"s\",\"cpu_usage\":\"%\",\"swap\":\"Kb\",\"loadavg\":\"noUnit\",\"batt\":\"noUnit\",\"power\":\"noUnit\",\"freeRAM\":\"Kb\"}";
+var model_stg = global.config.model;
 var topic_query = "Home/+/r_query";
-var topic_query_reply = "Home/11/q_reply";
-var url_database = "mongodb://192.168.1.3:27017/nodo_1_1_db";
 
 var free_stg;
 var memFree;
@@ -73,6 +72,7 @@ function main_callback (){
 		
 		var nodos = [];
 		var topic_str = topic_aux.toString();
+		topic_aux = topic_aux.substring(1);
 		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/'));
 		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );
 		
@@ -125,7 +125,7 @@ function main_callback (){
 		
 		if (channel == "r_query"){
 			
-			var pos = topic_aux.indexOf('<11>');
+			var pos = topic_aux.indexOf(topic_id);
 			
 			if (pos != -1){
 				
@@ -203,7 +203,8 @@ function main_callback (){
 					  }
 					});
 			}
-		}
+		}		
+		
 	});
 
 }
@@ -276,8 +277,6 @@ function check_mem (){
 
 function check_cpu (){
 	var interval = setInterval (function(){
-		var max_stg = 1048576; // 1G en kb
-		var stg;
 		
 		child1 = exec("grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'", function (error, stdout, stderr) {
 		if (error !== null) {
@@ -323,17 +322,8 @@ function check_swap (){
 function check_timestamp (){
 	var interval = setInterval (function(){
 		
-		// child = exec("date +%s", function (error, stdout, stderr) {
-		// if (error !== null) {
-			// console.log('exec error: ' + error);
-		// } else {
-			// timestamp = parseInt(stdout);
-		
-		// }
-	  // });	
-	  
-		timestamp = new Date().getTime();
-		  
+		timestamp = new Date().getTime(); 
+	
 	},1000);	
 }
 
@@ -352,25 +342,49 @@ function check_loadaverage (){
 	},1000);	
 }
 
-function main_loop(){
+function loop_meta(){
 	var interval = setInterval(function() {
 
 		updateStatus("meta", nodeID, checkMetadata(), 0);
+
+	}, parseInt(global.config.node.update_meta));
+}
+function loop_istate(){
+	var interval = setInterval(function() {
+
 		updateStatus("istate", nodeID, checkResources(), 1);
 
-	}, 5000);
+	}, parseInt(global.config.node.update_istate));
 }
-
 function loop_model(){
 	var interval = setInterval(function() {
 		
 		updateStatus("istate", nodeID, model_stg, 1);
 	
-	}, 20000);
+	}, parseInt(global.config.node.update_model));
 }
 
+function create_conf (){
+global.topic_model_req = path.join(prefix,nodeID,'model_req');
+global.topic_request = path.join(prefix,nodeID,'request');
+global.topic_reply = path.join(prefix,nodeID,'reply');
+global.topic_model = path.join(prefix,nodeID,'model');
+global.topic_query_reply = path.join(prefix,nodeID,'q_reply');
 
-exports.main_loop = main_loop;
+global.topic_id = "<";
+topic_id = topic_id.concat(nodeID);
+topic_id = topic_id.concat(">");
+
+global.url_database = "mongodb://";
+url_database = url_database.concat(global.config.db.host);
+url_database = url_database.concat(":");
+url_database = url_database.concat(global.config.db.port);
+url_database = url_database.concat("/");
+url_database = url_database.concat(global.config.db.database);
+}
+
+exports.loop_meta = loop_meta;
+exports.loop_istate = loop_istate;
 exports.loop_model = loop_model;
 exports.main_callback = main_callback;
 exports.newConection = newConection;

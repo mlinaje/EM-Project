@@ -1,13 +1,13 @@
-var app = require('./functions')
-	,host = '192.168.1.3' 
-	,port = 1883
-	,keepalive =10000;
+ var app = require('./functions');
+ 
+// Global variables
+global.config = require('./conf/config');	
 	
-	
-app.newConection(port, host, keepalive);
+app.newConection(parseInt(global.config.mqtt.port), global.config.mqtt.host, parseInt(global.config.mqtt.keepalive));
  
 app.main_callback();
-app.main_loop();
+app.loop_meta();
+app.loop_istate();
 app.loop_model();
 
 
