@@ -935,7 +935,7 @@ function clean_daemon(){
 						var obj_meta = JSON.parse(NodosMeta[j]);
 						var keys_nodes = Object.keys(obj_meta);
 						if (nodo == keys_nodes[0]){					
-							NodosMeta.splice(i,1); // the metadata for this node is removed
+							NodosMeta.splice(j,1); // the metadata for this node is removed
 							break;
 						}
 					}
@@ -944,7 +944,7 @@ function clean_daemon(){
 						var obj_model = JSON.parse(NodosModel[j]);
 						var keys_nodes = Object.keys(obj_model);
 						if (nodo == keys_nodes[0]){					
-							NodosModel.splice(i,1); // the model for this node is removed
+							NodosModel.splice(j,1); // the model for this node is removed
 							break;
 						}
 					}
