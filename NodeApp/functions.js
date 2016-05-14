@@ -59,16 +59,18 @@ var FreeRAM = []; // array that contains the free RAM param for every node
 // This json object contains the weight value for each param that the program use
 // The result of add all of them must be 1
 // The param numberNodes contain the number of nodes that will be use to storage the information
-var parameters = {
-	weightMem :"0.1",
-	weigthProc :"0.5",
-	weigthBatt :"0.1",
-	weigthLat :"0.1",
-	weigthPower :"0.1",
-	weigthRAM: "0.1",
-	numberNodes: "2"
-};
+// var parameters = {
+	// weightMem :"0.1",
+	// weigthProc :"0.5",
+	// weigthBatt :"0.1",
+	// weigthLat :"0.1",
+	// weigthPower :"0.1",
+	// weigthRAM: "0.1",
+	// numberNodes: "2"
+// };
 
+
+var parameters = global.config.parameters;
 // This function create the connection to a MQTT Broker and show error message if needed
 // Port: tcp port that is listening the requests
 // Host: broker name or ip address 
@@ -893,7 +895,7 @@ function request_daemon (){
 			json_req = json_req.concat(token);
 			json_req = json_req.concat('", "time" : "');
 			json_req = json_req.concat(milis);
-			json_req = json_req.concat('"}');
+			json_req = json_req.concat('", "attempt" : "0"}');
 			requests.push(json_req); // the json object is pushed to "request" array
 			
 			var topic = 'Home/'; // topic is created with the node name
@@ -913,32 +915,45 @@ function clean_daemon(){
 			var obj = JSON.parse(requests[i]);
 			var time = obj.time;
 			var nodo = obj.nodo;
+			var token = obj.token;
+			var attempt = obj.attempt;
 			var now = new Date();
 			var milis = now.getTime();
 			var dif = milis - time;
-			if (dif > 10000){
-				for (var j = 0; j<NodosMeta.length; j++){
-					var obj_meta = JSON.parse(NodosMeta[j]);
-					var keys_nodes = Object.keys(obj_meta);
-					if (nodo == keys_nodes[0]){					
-						NodosMeta.splice(i,1); // the metadata for this node is removed
-						break;
-					}
-				}
+			if (dif >= 2000){
 				
-				for (var j = 0; j<NodosModel.length; j++){
-					var obj_model = JSON.parse(NodosModel[j]);
-					var keys_nodes = Object.keys(obj_model);
-					if (nodo == keys_nodes[0]){					
-						NodosModel.splice(i,1); // the model for this node is removed
-						break;
+				if (attempt == 0){
+					obj.attempt = 1;
+					requests[i] = JSON.stringify(obj);
+					var topic = 'Home/'; // topic is created with the node name
+					topic = topic.concat(nodo);
+					topic = topic.concat('/request');
+					client.publish(topic, token.toString()); // the request is published
+					
+				}else{
+					for (var j = 0; j<NodosMeta.length; j++){
+						var obj_meta = JSON.parse(NodosMeta[j]);
+						var keys_nodes = Object.keys(obj_meta);
+						if (nodo == keys_nodes[0]){					
+							NodosMeta.splice(i,1); // the metadata for this node is removed
+							break;
+						}
 					}
+					
+					for (var j = 0; j<NodosModel.length; j++){
+						var obj_model = JSON.parse(NodosModel[j]);
+						var keys_nodes = Object.keys(obj_model);
+						if (nodo == keys_nodes[0]){					
+							NodosModel.splice(i,1); // the model for this node is removed
+							break;
+						}
+					}
+					Nodes ();
+					requests.splice(i,1); // this specific request is deleted
 				}
-				Nodes ();
-				requests.splice(i,1); // this specific request is deleted
 			}
 		}
-	}, 10000);
+	}, 2000);
 }
 
 //this function calculates the average latency for a specific node to avoid punctual fluctuations
@@ -1046,7 +1061,7 @@ function query_daemon (){
 					r_Queries.splice(index,1);
 				}
 			}
-	}
+		}
 		
 	}, 5000); 
 
