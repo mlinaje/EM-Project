@@ -1,4 +1,5 @@
 var app = require('./functions')
+var server = require('./server')
 
 // Global variables
 global.config = require('./conf/config');	

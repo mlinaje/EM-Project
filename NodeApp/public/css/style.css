@@ -1,0 +1,20 @@
+table, th, td {
+    font-weight: bold;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse; 
+}
+
+th {
+    height: 50px;
+    text-align: center;
+    background-color: #0033FF;
+    color: white;
+}
+
+td {
+    height: 50px;
+    text-align: center;
+}
