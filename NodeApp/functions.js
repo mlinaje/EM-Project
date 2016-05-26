@@ -801,7 +801,7 @@ function getNodes (param){
 		var nodo_aux = Object.keys(obj)[0];
 		Nodos_gl.push(nodo_aux);
 	}
-	
+	var totalNodes = Nodos_gl.slice(0, Nodos_gl.length);
 	var nextStgNodes = []; // next storage nodes
 	if (numberNodes <= result.length){ // we want to have less number of storage nodes than we have
 		for (var i = 0; i < numberNodes; i++){
@@ -817,9 +817,10 @@ function getNodes (param){
 			result.splice(result.indexOf(Math.max.apply(null,result)), 1); // delete the previus node for result array 
 		}
 	}
-	updateStgNodes(nextStgNodes); // communicates  which nodes have to store and which have not
+	updateStgNodes(nextStgNodes, totalNodes); // communicates  which nodes have to store and which have not
 	Nodos_gl = [];
 	nextStgNodes = [];
+	totalNodes = [];
 	// cleaning the parameter array
 	Mem = []; 
 	Proc = []; 
@@ -831,9 +832,11 @@ function getNodes (param){
 
 
 //This function is responsible for communicating to the nodes what to do
-function updateStgNodes (nextStgNodes){
+function updateStgNodes (nextStgNodes, totalNodes){
 	console.log("...................................");
 	console.log(nextStgNodes);
+	console.log("..........DE..............");
+	console.log (totalNodes);
 	console.log("...................................");
 	//first, the application informs the nodes that they have to subscribe to the channel to which you all the information must be stored
 	for(var i = 0; i < nextStgNodes.length; i++){ 
@@ -872,6 +875,7 @@ function updateStgNodes (nextStgNodes){
 		var milis = now.getTime();
 		obj["time"] = milis;
 		obj["stg_nodes"] = currentStgNodes;
+		obj["total_nodes"] = totalNodes;
 		db.collection('nodes').insert(obj);					
 		db.close();
 	});		
@@ -924,6 +928,9 @@ function clean_daemon(){
 				
 				if (attempt == 0){
 					obj.attempt = 1;
+					var now = new Date();
+					var milis = now.getTime();
+					obj.time = milis;
 					requests[i] = JSON.stringify(obj);
 					var topic = 'Home/'; // topic is created with the node name
 					topic = topic.concat(nodo);
@@ -974,7 +981,7 @@ function averageLatency_daemon(){
 				var nodo_obj = '';
 				nodo_obj = '{"nodo" : "';
 				nodo_obj = nodo_obj.concat(nodo);
-				nodo_obj = nodo_obj.concat('", "lat_avg" : "'); 
+				nodo_obj = nodo_obj.concat('", "lat_avg" : "');
 				nodo_obj = nodo_obj.concat(lat_avg);
 				nodo_obj = nodo_obj.concat('"}');
 				latency_avg.push(nodo_obj);
