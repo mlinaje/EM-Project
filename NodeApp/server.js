@@ -7,22 +7,204 @@ var express = require("express");
 //lets require/import the mongodb native drivers.
 var mongodb = require('mongodb');
 
+var path = require('path'); // This package is usefull to create the mqtt topcis
+
+var mqtt = require('mqtt'); // Comunication protocol to comunicate with the nodes
+
 //We need to work with "MongoClient" interface in order to connect to a mongodb server.
 var MongoClient = mongodb.MongoClient;
 
-// Connection URL. This is where your mongodb server is running.
-var url = 'mongodb://localhost:27017/nodo_ctl_db';
+//NPM Module to integrate Handlerbars UI template engine with Express
+var exphbs  = require('express-handlebars');
+
+// Global variables
+create_conf();
+var client;
 var responseArray = [];
+var NodosModel = [];
+var rtValues = [];
 var numberOfNodes = 0;
 //DB Object
 var dbObject;
-
+var prefix = global.config.node.prefix;
 
 MongoClient.connect(url, function(err, db){
   if ( err ) throw err;
   dbObject = db;
 });
 
+function newConection (port, host, keepalive) {
+	
+	client = mqtt.connect({ port: port, host: host, keepalive: keepalive});
+
+	client.on('error', function () {
+        logger.error({
+            method: "connect(error)",
+            arguments: arguments,
+            cause: "likely MQTT issue - will automatically reconnect soon",
+        }, "unexpected error");
+    });
+	
+    client.on('close', function () {
+        logger.error({
+            method: "connect(close)",
+            arguments: arguments,
+            cause: "likely MQTT issue - will automatically reconnect soon",
+        }, "unexpected close");
+    });
+	
+	client.on('message', function (topic_aux, message) {
+		topic_aux = topic_aux.substring(1);	
+		var nodo = topic_aux.substring(topic_aux.indexOf('/') + 1, topic_aux.lastIndexOf('/')); //parsing the node
+		var channel = topic_aux.substring(topic_aux.lastIndexOf('/') + 1 );	//parsing the channel
+	
+		if (channel == "model"){
+			var nodos = [];
+			// if there is not any object in the model array, push the first one
+			if(NodosModel.length == 0){
+				NodosModel.push(message.toString());
+			}
+			
+			else {
+			
+				for (var i = 0; i<NodosModel.length; i++){ // this loop get all node names in the array to check if the currect node already exist in it
+					var obj = JSON.parse(NodosModel[i]);
+					var nodo_aux = obj.nodo;
+					nodos.push(nodo_aux); // "nodos" param has all the node names
+				}
+				
+				if (nodos.indexOf(nodo) != -1){ //if the node already exists, the app replace the objetc
+					NodosModel[nodos.indexOf(nodo)] = message.toString();
+				}else{ // else, push a new json object
+					NodosModel.push(message.toString());
+				}
+			}
+			nodos = []; // cleaning variables
+		}
+		
+		if (channel == "istate"){
+			var obj = JSON.parse(message.toString());
+			var nodos = [];
+			if (obj.nodo == undefined){
+				
+				if(rtValues.length == 0){
+					var values = [];
+					values.push(message.toString());
+					var rtVal_aux = {"node":nodo,"values":values};
+					rtValues.push(rtVal_aux);
+				}else{
+					for (var i = 0; i<rtValues.length; i++){ 
+						var obj = rtValues[i];
+						var nodo_aux = obj.node;
+						nodos.push(nodo_aux);
+					}
+					if (nodos.indexOf(nodo) != -1){ 
+						var obj_val = rtValues[nodos.indexOf(nodo)];
+						var array_val = obj_val.values;
+						if (array_val.length == 20){
+							array_val.shift();
+						}
+						array_val.push(message.toString());
+						var rtVal_aux = {"node":nodo,"values":array_val};
+						rtValues[nodos.indexOf(nodo)] = rtVal_aux;
+						
+					}else{
+						var values = [];
+						values.push(message.toString());
+						var rtVal_aux = {"node":nodo,"values":values};
+						rtValues.push(rtVal_aux);
+					}
+					nodos = []; 
+				}
+			}
+		}
+		
+	});	
+}
+
+
+
+function realTimereq(node, responseObj){
+	var topic_model = path.join(prefix,node,'model');
+	client.subscribe(topic_model);	
+	var topic_model_req = path.join(prefix,node,'model_req');
+	client.publish(topic_model_req, "req");
+	var topic_istate = path.join(prefix,node,'istate');
+	client.subscribe(topic_istate);
+	console.log("peticion realizada");
+	var response = {"res":"ok"};
+	responseObj.json(response);
+}
+
+function realTime(node,param, responseObj){
+	var nodos = [];
+	var params = [];
+	
+	for (var i = 0; i<rtValues.length; i++){ 
+		var obj = rtValues[i];
+		var nodo_aux = obj.node;
+		nodos.push(nodo_aux);
+	}
+
+	if (nodos.indexOf(node) != -1){
+		var timestamp = [];
+		var data = [];
+		var unit = "";
+		
+		for (var i = 0; i<rtValues.length; i++){
+			var obj = rtValues[i];
+			var nodo_aux = obj.node;
+			if (nodo_aux == node){
+				params = Object.keys(JSON.parse(obj.values[0]));
+				break;
+			}
+		}
+		if (params.indexOf(param) != -1){
+				
+			for (var i = 0; i<NodosModel.length; i++){
+				var obj = JSON.parse(NodosModel[i]);
+				var nodo_aux = obj.nodo;
+				if (nodo_aux == node){
+					unit = obj[param];
+					break;
+				}
+			}
+			
+			for (var i = 0; i<rtValues.length; i++){ 
+				var obj = rtValues[i];
+				var nodo_aux = obj.node;
+				if (nodo_aux == node){
+					var val_aux = obj.values;
+					for (var j = 0; j<val_aux.length; j++){
+						obj_dat = JSON.parse(val_aux[j]);
+						var time = obj_dat.timestamp;				
+						var dat = obj_dat[param];				
+						timestamp.push({"label":time});
+						data.push({"value":dat});
+					}
+					var seriename = ""+param+"("+unit+")";
+					
+					var dataset = [{
+					"seriesname" : seriename,
+					"data" : data
+					}];
+					
+					var response = {
+						"dataset":dataset,
+						"categories":timestamp
+					};
+					break;
+				}
+			}
+		}else{
+			var response = {"error":"param not available"}
+		}
+	}else{
+		var response = {"error":"node not available"}
+	}
+	nodos = [];
+	responseObj.json(response);
+}
 function getData(responseObj){
     // Get the documents collection
    dbObject.listCollections().toArray(function(err,collections){
@@ -83,12 +265,8 @@ function getData(responseObj){
     }
   })
 }
-
 //create express app
 var app = express();
-
-//NPM Module to integrate Handlerbars UI template engine with Express
-var exphbs  = require('express-handlebars');
 
 //Declaring Express to use Handlerbars template engine with main.handlebars as
 //the default layout
@@ -106,14 +284,25 @@ app.get("/nodes", function(req, res){
   getData(res);
 });
 
-app.get("/prueba", function(req, res){
-  console.log(req.query);
-  console.log(req.query.init);
-  console.log(req.query.fin);
-  res = "";
+app.get("/realtimereq", function(req, res){
+	realTimereq(req.query.node,res);
 });
-
+app.get("/realtime", function(req, res){
+	realTime(req.query.node,req.query.param,res);
+});
 
 app.listen("8080", function(){
-  console.log('Server up: http://localhost:8080');
+  console.log('Server up: port 8080');
 });
+
+
+function create_conf (){
+global.url = "mongodb://";
+url = url.concat(global.config.db.host);
+url = url.concat(":");
+url = url.concat(global.config.db.port);
+url = url.concat("/");
+url = url.concat(global.config.db.database);
+}
+
+exports.newConection = newConection;

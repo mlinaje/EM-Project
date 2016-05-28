@@ -41,7 +41,6 @@ var requests = [];
 var latency = [];
 var latency_avg = [];
 var eof = [];
-//var url = 'mongodb://localhost:27017/nodo_1_db';
 
 var Mem = []; //array that contains the memory param for every node
 
@@ -54,20 +53,6 @@ var Lat = []; //array that contains the latency param for every node
 var Power = []; // array that contains the power param for every node
 
 var FreeRAM = []; // array that contains the free RAM param for every node
-
-
-// This json object contains the weight value for each param that the program use
-// The result of add all of them must be 1
-// The param numberNodes contain the number of nodes that will be use to storage the information
-// var parameters = {
-	// weightMem :"0.1",
-	// weigthProc :"0.5",
-	// weigthBatt :"0.1",
-	// weigthLat :"0.1",
-	// weigthPower :"0.1",
-	// weigthRAM: "0.1",
-	// numberNodes: "2"
-// };
 
 
 var parameters = global.config.parameters;
@@ -519,8 +504,8 @@ function getModel_Meta (){
 
 //this function search all meta data and the units and group them to call the function that calculate the storage nodes
 function Nodes (){
-	console.log(NodosMeta);
-	console.log(NodosModel);
+	//console.log(NodosMeta);
+	//console.log(NodosModel);
 
 	for (var i = 0; i<NodosMeta.length; i++){ //loop to get the node names
 		var obj = JSON.parse(NodosMeta[i]);
@@ -833,11 +818,11 @@ function getNodes (param){
 
 //This function is responsible for communicating to the nodes what to do
 function updateStgNodes (nextStgNodes, totalNodes){
-	console.log("...................................");
-	console.log(nextStgNodes);
-	console.log("..........DE..............");
-	console.log (totalNodes);
-	console.log("...................................");
+	// console.log("...................................");
+	// console.log(nextStgNodes);
+	// console.log("..........DE..............");
+	// console.log (totalNodes);
+	// console.log("...................................");
 	//first, the application informs the nodes that they have to subscribe to the channel to which you all the information must be stored
 	for(var i = 0; i < nextStgNodes.length; i++){ 
 

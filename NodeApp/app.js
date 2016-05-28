@@ -5,6 +5,7 @@ var server = require('./server')
 global.config = require('./conf/config');	
 	
 app.newConection(parseInt(global.config.mqtt.port), global.config.mqtt.host, parseInt(global.config.mqtt.keepalive)); 
+server.newConection(parseInt(global.config.mqtt.port), global.config.mqtt.host, parseInt(global.config.mqtt.keepalive));
 
 app.getModel_Meta();
 app.request_daemon();
