@@ -1,0 +1,37 @@
+
+<p>Click the button to display the nodes.</p>
+
+<button id="hide" hidden="hidden">Hide</button>
+<button id="show">Show</button>
+
+<div id="table-location">
+<div id="dynamictable"></div>
+</div>
+<br/>
+
+<p>Click the button to display real time values.</p>
+
+<button id="realtime">Real time</button>
+<select id="nodeSel" hidden="hidden">
+   <option value="1">1</option> 
+   <option value="11">11</option> 
+   <option value="111">111</option>
+   <option value="12">12</option> 
+   <option value="121">121</option> 
+</select>
+
+<select id="paramSel" hidden="hidden">
+   <option value="cpu_usage">cpu_usage</option> 
+   <option value="mem">mem</option> 
+   <option value="swap">swap</option>
+   <option value=loadavg>loadavg</option> 
+   <option value="freeRAM">freeRAM</option> 
+</select>
+
+<button id="accept" hidden="hidden">Accept</button>
+
+<p id="debug"></p>
+
+<!-- Location where the chart will be added -->
+<div id="chart-location">
+</div>

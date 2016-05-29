@@ -301,6 +301,7 @@ function getModel_Meta (){
 		if (channel == "query"){
 			var nodo_src = nodo;
 			var q_obj = JSON.parse(message.toString());
+			var query_id = q_obj.query_id;
 			var param = q_obj.param;
 			var nodo_dst = q_obj.nodo;
 			var gt = parseInt(q_obj.timeInit);
@@ -339,8 +340,6 @@ function getModel_Meta (){
 						
 					}
 				 }
-				   var query_id = getRandomInt(1000,10000);	
-				   q_obj["query_id"] = query_id;
 				   var nodes = "";
 				   var nodes_array = [];
 				   for (var i = 0; i<total_stg_nodes.length; i++){
@@ -405,7 +404,7 @@ function getModel_Meta (){
 			var val = q_obj.val;
 			var collection_name = "coll_";
 			collection_name = collection_name.concat(q_id);
-			delete q_obj["query_id"];
+			//delete q_obj["query_id"];
 
 			if(val == "eof"){
 				var node_r = q_obj.node;
@@ -454,13 +453,14 @@ function getModel_Meta (){
 						  if (err) {
 							console.log(err);
 						  } else if (result.length) {
-							console.log('Found:', result);
 							for (var i=0; i<result.length; i++){
 								delete result[i]._id;
 								var stg_result = JSON.stringify(result[i]);
 								client.publish(topic,stg_result);
 								
 							}
+							var msg_eoq = '{"val" : "eof",  "query_id" : "'+q_id+'"}';
+							client.publish(topic,msg_eoq);
 							collection.drop();
 						  } else {
 							console.log('No document(s) found with defined "find" criteria!');

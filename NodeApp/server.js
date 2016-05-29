@@ -9,6 +9,8 @@ var mongodb = require('mongodb');
 
 var path = require('path'); // This package is usefull to create the mqtt topcis
 
+var bunyan = require('bunyan'); // This package is used like debugger
+
 var mqtt = require('mqtt'); // Comunication protocol to comunicate with the nodes
 
 //We need to work with "MongoClient" interface in order to connect to a mongodb server.
@@ -19,6 +21,7 @@ var exphbs  = require('express-handlebars');
 
 // Global variables
 create_conf();
+var logger = bunyan.createLogger({name:'EMProyect'});
 var client;
 var responseArray = [];
 var NodosModel = [];
@@ -27,6 +30,7 @@ var numberOfNodes = 0;
 //DB Object
 var dbObject;
 var prefix = global.config.node.prefix;
+var topic_response = "Home/server/response";
 
 MongoClient.connect(url, function(err, db){
   if ( err ) throw err;
@@ -52,6 +56,8 @@ function newConection (port, host, keepalive) {
             cause: "likely MQTT issue - will automatically reconnect soon",
         }, "unexpected close");
     });
+	
+	client.subscribe(topic_response);
 	
 	client.on('message', function (topic_aux, message) {
 		topic_aux = topic_aux.substring(1);	
@@ -81,6 +87,10 @@ function newConection (port, host, keepalive) {
 			}
 			nodos = []; // cleaning variables
 		}
+		
+		if (channel == "response"){
+			console.log(message.toString());
+		}		
 		
 		if (channel == "istate"){
 			var obj = JSON.parse(message.toString());
@@ -136,6 +146,16 @@ function realTimereq(node, responseObj){
 	responseObj.json(response);
 }
 
+function query (node, param, min, max, responseObj){
+	
+	var topic_query = "Home/server/query";
+	var query_id = getRandomInt(1000,10000);
+	var msg = '{"nodo":"'+node+'","query_id":"'+query_id+'","param":"'+param+'","timeInit":"'+min+'","timeEnd":"'+max+'"}';
+	client.publish(topic_query,msg);
+	var response = {"res":"ok"};
+	responseObj.json(response);
+}
+
 function realTime(node,param, responseObj){
 	var nodos = [];
 	var params = [];
@@ -178,9 +198,9 @@ function realTime(node,param, responseObj){
 					for (var j = 0; j<val_aux.length; j++){
 						obj_dat = JSON.parse(val_aux[j]);
 						var time = obj_dat.timestamp;				
-						var dat = obj_dat[param];				
-						timestamp.push({"label":time});
-						data.push({"value":dat});
+						var dat = obj_dat[param];
+						timestamp.push({"label":time.toString()});
+						data.push({"value":dat.toString()});
 					}
 					var seriename = ""+param+"("+unit+")";
 					
@@ -276,19 +296,22 @@ app.set('view engine', 'handlebars');
 //Defining middleware to serve static files
 app.use('/public', express.static('public'));
 
-app.get("/", function(req, res){
-  res.render("chart");
+app.get("/nodesview", function(req, res){
+  res.render("display_nodes");
 });
 
 app.get("/nodes", function(req, res){
   getData(res);
 });
 
-app.get("/realtimereq", function(req, res){
-	realTimereq(req.query.node,res);
+app.get("/realtimereq/:node", function(req, res){
+	
+	realTimereq(req.params.node, res);
+
 });
-app.get("/realtime", function(req, res){
-	realTime(req.query.node,req.query.param,res);
+app.get("/realtime/:node/:param", function(req, res){
+	
+	realTime(req.params.node,req.params.param,res);
 });
 
 app.listen("8080", function(){
