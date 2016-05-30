@@ -122,5 +122,20 @@ $(document).ready(function(){
 		var param = document.getElementById("paramSel").value;
 		realTime(node,param);
     });
+	
+	$("#specific").click(function(){
+		$("#filter").show();
+    });
+	
+	$("#accept_q").click(function(){
+		var node = document.getElementById("nodeSel_q").value;
+		var param = document.getElementById("paramSel_q").value;
+		var start = Date.parse(document.getElementById("start").value);
+		var end = Date.parse(document.getElementById("end").value);
+		document.getElementById("node_p").innerHTML = node;
+		document.getElementById("param_p").innerHTML = param;
+		document.getElementById("start_p").innerHTML = start;
+		document.getElementById("end_p").innerHTML = end;
+    });
 });
 

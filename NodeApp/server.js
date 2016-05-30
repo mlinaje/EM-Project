@@ -25,6 +25,7 @@ var logger = bunyan.createLogger({name:'EMProyect'});
 var client;
 var responseArray = [];
 var NodosModel = [];
+var responses = [];
 var rtValues = [];
 var numberOfNodes = 0;
 //DB Object
@@ -89,7 +90,60 @@ function newConection (port, host, keepalive) {
 		}
 		
 		if (channel == "response"){
-			console.log(message.toString());
+			var obj = JSON.parse(message.toString());
+			var val = obj.val;
+			var queries = [];
+			var q_id = obj.query_id;
+			
+			if (val === "eof"){
+				for (var i = 0; i<responses.length; i++){ 
+
+						if (responses[i]["q_id"] === q_id){
+							responses[i]["eof"] = true;
+							break;
+						}
+					}
+					
+			}else{
+				
+				if(responses.length == 0){
+					
+					var values = [];
+					var obj_aux = {};
+					values.push(message.toString());
+					obj_aux["q_id"] = q_id;
+					obj_aux["eof"] = false;
+					obj_aux["values"] = values;
+					responses.push(obj_aux);
+					
+				}else{
+					
+					for (var i = 0; i<responses.length; i++){ 
+						var q_id_aux = responses[i]["q_id"];
+						queries.push(q_id_aux); 
+					}
+					
+					if (queries.indexOf(q_id) != -1){
+						
+						var values_aux = responses[queries.indexOf(q_id)]["values"];
+						values_aux.push(message.toString());
+						responses[queries.indexOf(q_id)]["values"] = values_aux;
+						
+					}else{
+						
+						var values = [];
+						var obj_aux = {};
+						values.push(message.toString());
+						obj_aux["q_id"] = q_id;
+						obj_aux["eof"] = false;
+						obj_aux["values"] = values;
+						responses.push(obj_aux);
+						
+					}
+				}
+				queries = [];
+			}
+			console.log(responses);
 		}		
 		
 		if (channel == "istate"){

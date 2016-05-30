@@ -29,8 +29,57 @@
 </select>
 
 <button id="accept" hidden="hidden">Accept</button>
+<br/>
 
-<p id="debug"></p>
+<p>Click the button to specific query.</p>
+
+<button id="specific">Specific Query</button>
+
+<div id="filter" hidden="hidden">
+
+<button id="realtime">Real time</button>
+
+<p>Select node</p><br/>
+
+<select id="nodeSel_q">
+   <option value="1">1</option> 
+   <option value="11">11</option> 
+   <option value="111">111</option>
+   <option value="12">12</option> 
+   <option value="121">121</option> 
+</select>
+
+<br/>
+
+<p>Select parameter</p><br/>
+
+<select id="paramSel_q">
+   <option value="cpu_usage">cpu_usage</option> 
+   <option value="mem">mem</option> 
+   <option value="swap">swap</option>
+   <option value=loadavg>loadavg</option> 
+   <option value="freeRAM">freeRAM</option> 
+</select>
+
+<br/>
+
+	<p>Select start time</p><br/>
+	
+	<input type="datetime-local" id="start"><br/>
+	
+	<p>Select end time</p><br/>
+	
+	<input type="datetime-local" id="end"><br/>
+	
+	<button id="accept_q">Accept</button>
+	
+</div>
+
+
+<p id="node_p"></p><br/>
+<p id="param_p"></p><br/>
+<p id="start_p"></p><br/>
+<p id="end_p"></p>
 
 <!-- Location where the chart will be added -->
 <div id="chart-location">
