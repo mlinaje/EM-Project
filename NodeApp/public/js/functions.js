@@ -63,13 +63,6 @@ function realTime(node,param) {
 					if (data.error != undefined){
 						console.log("error");
 					}else{
-							console.log(data);
-						  	console.log( data["categories"]);
-							console.log( data["dataset"]);
-							console.log("..............");
-						   //var template = Handlebars.compile($("#tabular-template").html());
-						   //$("chart-location").html(template(data));
-						
 						var chartProperties = {
 							"caption": "Node 1 CPU usage",
 							"xAxisName": "timestamp",
@@ -101,6 +94,47 @@ function realTime(node,param) {
 		
 	}
 }
+
+function specificQuery(node,param, max, min) {
+
+	var url_main = 'http://10.10.1.1:8080/specific/'+node +'/'+ param +'/'+max +'/'+min;
+	
+	$(function(){
+	  $.ajax({
+		url: url_main,
+		type: 'GET',
+		success : function(data) {
+			if (data.error != undefined){
+				console.log("error");
+			}else{
+				var chartProperties = {
+					"caption": "Node 1 CPU usage",
+					"xAxisName": "timestamp",
+					"yAxisName": "CPU usage"
+				  };
+
+				  var categoriesArray = [{
+					  "category" : data["categories"]
+				  }];
+				  var lineChart = new FusionCharts({
+					type: 'msline',
+					renderAt: 'chart-location',
+					width: '1000',
+					height: '600',
+					dataFormat: 'json',
+					dataSource: {
+					  chart: chartProperties,
+					  categories : categoriesArray,
+					  dataset : data["dataset"]
+					}
+				  });
+				  lineChart.render();
+			}
+	  }
+	  });
+	});	
+}
+	
 $(document).ready(function(){
     $("#show").click(function(){
         displayNodes("start");
@@ -132,10 +166,7 @@ $(document).ready(function(){
 		var param = document.getElementById("paramSel_q").value;
 		var start = Date.parse(document.getElementById("start").value);
 		var end = Date.parse(document.getElementById("end").value);
-		document.getElementById("node_p").innerHTML = node;
-		document.getElementById("param_p").innerHTML = param;
-		document.getElementById("start_p").innerHTML = start;
-		document.getElementById("end_p").innerHTML = end;
+		specificQuery(node,param, start-7200000, end-7200000);
     });
 });
 

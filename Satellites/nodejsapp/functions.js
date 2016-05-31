@@ -360,7 +360,8 @@ function loop_model(){
 	var interval = setInterval(function() {
 		
 		updateStatus("istate", nodeID, model_stg, 1);
-	
+		client.publish(topic_model, model_stg);
+		
 	}, parseInt(global.config.node.update_model));
 }
 

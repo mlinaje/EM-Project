@@ -26,6 +26,7 @@ var client;
 var responseArray = [];
 var NodosModel = [];
 var responses = [];
+var eof = [];
 var rtValues = [];
 var numberOfNodes = 0;
 //DB Object
@@ -99,7 +100,7 @@ function newConection (port, host, keepalive) {
 				for (var i = 0; i<responses.length; i++){ 
 
 						if (responses[i]["q_id"] === q_id){
-							responses[i]["eof"] = true;
+								eof.push(q_id);
 							break;
 						}
 					}
@@ -112,7 +113,6 @@ function newConection (port, host, keepalive) {
 					var obj_aux = {};
 					values.push(message.toString());
 					obj_aux["q_id"] = q_id;
-					obj_aux["eof"] = false;
 					obj_aux["values"] = values;
 					responses.push(obj_aux);
 					
@@ -135,7 +135,6 @@ function newConection (port, host, keepalive) {
 						var obj_aux = {};
 						values.push(message.toString());
 						obj_aux["q_id"] = q_id;
-						obj_aux["eof"] = false;
 						obj_aux["values"] = values;
 						responses.push(obj_aux);
 						
@@ -143,7 +142,6 @@ function newConection (port, host, keepalive) {
 				}
 				queries = [];
 			}
-			console.log(responses);
 		}		
 		
 		if (channel == "istate"){
@@ -200,15 +198,6 @@ function realTimereq(node, responseObj){
 	responseObj.json(response);
 }
 
-function query (node, param, min, max, responseObj){
-	
-	var topic_query = "Home/server/query";
-	var query_id = getRandomInt(1000,10000);
-	var msg = '{"nodo":"'+node+'","query_id":"'+query_id+'","param":"'+param+'","timeInit":"'+min+'","timeEnd":"'+max+'"}';
-	client.publish(topic_query,msg);
-	var response = {"res":"ok"};
-	responseObj.json(response);
-}
 
 function realTime(node,param, responseObj){
 	var nodos = [];
@@ -339,6 +328,52 @@ function getData(responseObj){
     }
   })
 }
+
+function specific(node,param,max,min, responseObj){
+		var timestamp = [];
+		var data = [];
+		var unit = "";
+	
+	var topic_query = "Home/server/query";
+	var query_id = getRandomInt(1000,10000);
+	var msg = '{"nodo":"'+node+'","query_id":"'+query_id+'","param":"'+param+'","timeInit":"'+max+'","timeEnd":"'+min+'"}';
+	client.publish(topic_query,msg);
+	var interval;
+	interval = setInterval(function() {
+		if (eof.indexOf(query_id.toString()) != -1){
+			for (var i = 0; i<responses.length; i++){ 
+				var q_id_aux = responses[i]["q_id"];
+				if (q_id_aux == query_id){
+					var values_aux = responses[i]["values"];
+					for (var j = 0; j < values_aux.length; j++){
+						obj_dat = JSON.parse(values_aux[j]);
+						var time = obj_dat.timestamp;				
+						var dat = obj_dat.val;
+						unit = obj_dat.unit;
+						timestamp.push({"label":time.toString()});
+						data.push({"value":dat.toString()});
+					}
+					var seriename = ""+param+"("+unit+")";
+					
+					var dataset = [{
+					"seriesname" : seriename,
+					"data" : data
+					}];
+					
+					var response = {
+						"dataset":dataset,
+						"categories":timestamp
+					};
+					responses.splice(i,1);
+					responseObj.json(response);
+					clearInterval(interval);
+					break;
+				}
+			}
+		}
+	},20);
+}
+
 //create express app
 var app = express();
 
@@ -368,6 +403,11 @@ app.get("/realtime/:node/:param", function(req, res){
 	realTime(req.params.node,req.params.param,res);
 });
 
+app.get("/specific/:node/:param/:max/:min", function(req, res){
+	
+	specific(req.params.node,req.params.param,req.params.max,req.params.min,res);
+});
+
 app.listen("8080", function(){
   console.log('Server up: port 8080');
 });
@@ -381,5 +421,7 @@ url = url.concat(global.config.db.port);
 url = url.concat("/");
 url = url.concat(global.config.db.database);
 }
-
+function getRandomInt(min, max) { // just a function to calculate a random integer
+  return Math.floor(Math.random() * (max - min)) + min;
+}
 exports.newConection = newConection;

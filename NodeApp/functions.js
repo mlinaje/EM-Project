@@ -299,14 +299,15 @@ function getModel_Meta (){
 		});
 		
 		if (channel == "query"){
+			console.log(message.toString());
 			var nodo_src = nodo;
 			var q_obj = JSON.parse(message.toString());
-			var query_id = q_obj.query_id;
-			var param = q_obj.param;
-			var nodo_dst = q_obj.nodo;
-			var gt = parseInt(q_obj.timeInit);
+			var query_id = q_obj.query_id;	
+			var param = q_obj.param;			
+			var nodo_dst = q_obj.nodo;			
+			var gt = parseInt(q_obj.timeInit);			
 			var lt = parseInt(q_obj.timeEnd);
-			
+
 			//	Use connect method to connect to the Server
 				MongoClient.connect(url, function (err, db) {
 				if (err) {
