@@ -38,63 +38,68 @@ function displayNodes(operation) {
 		document.getElementById("myTable").remove();
 	}
 }
-function realTime(node,param) {
-	var url_req = 'http://10.10.1.1:8080/realtimereq/'+node;
-	var url_main = 'http://10.10.1.1:8080/realtime/'+node +'/'+ param;
-	var flag;
-	$(function(){
-		$.ajax({
-			url: url_req ,
-			type: 'GET',
-			success : function(data) {
-
-				flag = data.res;
-			}
-		});
-	});
-	
-	if(flag = "ok"){	
-		var interval = setInterval(function() {
-			$(function(){
-			  $.ajax({
-				url: url_main,
+function realTime(node,param,operation) {
+	var interval;
+	if (operation == "start"){
+		var url_req = 'http://10.10.1.1:8080/realtimereq/'+node;
+		var url_main = 'http://10.10.1.1:8080/realtime/'+node +'/'+ param;
+		var flag;
+		$(function(){
+			$.ajax({
+				url: url_req ,
 				type: 'GET',
 				success : function(data) {
-					if (data.error != undefined){
-						console.log("error");
-					}else{
-						var chartProperties = {
-							"caption": "Node 1 CPU usage",
-							"xAxisName": "timestamp",
-							"yAxisName": "CPU usage"
-						  };
 
-						  var categoriesArray = [{
-							  "category" : data["categories"]
-						  }];
-						  var lineChart = new FusionCharts({
-							type: 'msline',
-							renderAt: 'chart-location',
-							width: '1000',
-							height: '600',
-							dataFormat: 'json',
-							dataSource: {
-							  chart: chartProperties,
-							  categories : categoriesArray,
-							  dataset : data["dataset"]
-							}
-						  });
-						  lineChart.render();
-					}
-			  }
-			  });
+					flag = data.res;
+				}
 			});
-		}, 3000);
-	}else{
+		});
 		
-	}
-}
+		if(flag = "ok"){	
+			interval = setInterval(function() {
+				$(function(){
+				  $.ajax({
+					url: url_main,
+					type: 'GET',
+					success : function(data) {
+						if (data.error != undefined){
+							console.log("error");
+						}else{
+							var chartProperties = {
+								"caption": "Node 1 CPU usage",
+								"xAxisName": "timestamp",
+								"yAxisName": "CPU usage"
+							  };
 
+							  var categoriesArray = [{
+								  "category" : data["categories"]
+							  }];
+							  var lineChart = new FusionCharts({
+								type: 'msline',
+								renderAt: 'chart-location',
+								width: '1000',
+								height: '600',
+								dataFormat: 'json',
+								dataSource: {
+								  chart: chartProperties,
+								  categories : categoriesArray,
+								  dataset : data["dataset"]
+								}
+							  });
+							  lineChart.render();
+						}
+				  }
+				  });
+				});
+			}, 3000);
+		}
+
+	}else{
+		clearInterval(interval);
+		document.getElementById("chart-location").remove();
+	}
+
+}
 function specificQuery(node,param, max, min) {
 
 	var url_main = 'http://10.10.1.1:8080/specific/'+node +'/'+ param +'/'+max +'/'+min;
@@ -149,24 +154,52 @@ $(document).ready(function(){
 	$("#realtime").click(function(){
 		$("#nodeSel").show();
 		$("#paramSel").show();
-		$("#accept").show();		
+		$("#accept").show();
+		$("#specific").hide();	
+		$("#realtime").hide();
     });
 	$("#accept").click(function(){
 		var node = document.getElementById("nodeSel").value;
 		var param = document.getElementById("paramSel").value;
-		realTime(node,param);
+		$("#accept").hide();
+		$("#hide_rt").show();
+		realTime(node,param,"start");
+    });
+	
+	$("#hide_rt").click(function(){
+		var node = document.getElementById("nodeSel").value;
+		var param = document.getElementById("paramSel").value;
+		$("#realtime").show();
+		$("#nodeSel").hide();
+		$("#paramSel").hide();
+		$("#accept").hide();
+		$("#hide_rt").hide();
+		$("#specific").show();
+		realTime(node,param,"stop");
     });
 	
 	$("#specific").click(function(){
 		$("#filter").show();
+		$("#accept_q").show();
     });
 	
 	$("#accept_q").click(function(){
+		$("#filter").hide();
+		$("#accept_q").hide();
+		$("#hide_sq").show();
 		var node = document.getElementById("nodeSel_q").value;
 		var param = document.getElementById("paramSel_q").value;
 		var start = Date.parse(document.getElementById("start").value);
 		var end = Date.parse(document.getElementById("end").value);
 		specificQuery(node,param, start-7200000, end-7200000);
     });
+		
+	$("#hide_sq").click(function(){
+		$("#specific").show();	
+		$("#realtime").show();
+		$("#hide_sq").hide();
+		document.getElementById("chart-location").remove();
+    });
+	
 });
 

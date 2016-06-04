@@ -277,7 +277,7 @@ function getData(responseObj){
 			numberOfNodes = numberOfNodes +1;
 		}
 	}
-	for ( index in collections){  
+	for ( index in collections){ 
 		var col = collections[index].name;
 		if (col.indexOf("model_") != -1) {
         	dbObject.collection(col).find().sort({"time":-1}).limit(1).toArray(function(err, docs){
@@ -314,6 +314,18 @@ function getData(responseObj){
 			global.stgNodes = docsStg[0].stg_nodes;
 			global.totNodes = docsStg[0].total_nodes;
 			});
+			
+			responseArray.sort(function (a, b) {
+				  if (a.nodo > b.nodo) {
+					return 1;
+				  }
+				  if (a.nodo < b.nodo) {
+					return -1;
+				  }
+				  // a must be equal to b
+				  return 0;
+			});
+			
 			var response = {"nodes":responseArray,
 					"weigths":global.config.parameters,
 					"stgNodes":global.stgNodes,
