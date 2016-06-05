@@ -819,11 +819,11 @@ function getNodes (param){
 
 //This function is responsible for communicating to the nodes what to do
 function updateStgNodes (nextStgNodes, totalNodes){
-	// console.log("...................................");
-	// console.log(nextStgNodes);
-	// console.log("..........DE..............");
-	// console.log (totalNodes);
-	// console.log("...................................");
+	console.log("...................................");
+	console.log(nextStgNodes);
+	console.log("..........DE..............");
+	console.log (totalNodes);
+	console.log("...................................");
 	//first, the application informs the nodes that they have to subscribe to the channel to which you all the information must be stored
 	for(var i = 0; i < nextStgNodes.length; i++){ 
 

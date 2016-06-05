@@ -1,3 +1,6 @@
+var ip = "192.168.1.3";
+var port = "8080";
+
 function displayNodes(operation) {
 	var interval;
 	if (operation == "start"){
@@ -6,7 +9,7 @@ function displayNodes(operation) {
 			var table = $('#dynamictable').children();
 			interval = setInterval(function() {
 				  $.ajax({
-					url: 'http://10.10.1.1:8080/nodes',
+					url: 'http://'+ip+':'+port+'/nodes',
 					type: 'GET',
 					success : function(data) {
 						var res = data;
@@ -41,8 +44,8 @@ function displayNodes(operation) {
 function realTime(node,param,operation) {
 	var interval;
 	if (operation == "start"){
-		var url_req = 'http://10.10.1.1:8080/realtimereq/'+node;
-		var url_main = 'http://10.10.1.1:8080/realtime/'+node +'/'+ param;
+		var url_req = 'http://'+ip+':'+port+'/realtimereq/'+node;
+		var url_main = 'http://'+ip+':'+port+'/realtime/'+node +'/'+ param;
 		var flag;
 		$(function(){
 			$.ajax({
@@ -102,7 +105,7 @@ function realTime(node,param,operation) {
 }
 function specificQuery(node,param, max, min) {
 
-	var url_main = 'http://10.10.1.1:8080/istate/'+node +'/'+ param +'/'+max +'/'+min;
+	var url_main = 'http://'+ip+':'+port+'/istate/'+node +'/'+ param +'/'+max +'/'+min;
 	
 	$(function(){
 	  $.ajax({
