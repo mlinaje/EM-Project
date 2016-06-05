@@ -1,0 +1,22 @@
+{
+  "name": "EM-Project",
+  "version": "1.0.0",
+  "description": "Democratic and distributed storage in sensor networks",
+  "author": "Alfonso Galan Benitez <algalanb@gmail.com>",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "repository" :{ 
+    "type" : "git",
+	"url" : "https://github.com/algalanb/EM-Project"
+  },
+  "dependencies": {
+	"bunyan": "1.4.0",
+	"mongodb": "2.1.3",
+	"mqtt": "1.3.0",
+	"path": "0.11.14",
+	"node-dht-sensor": "0.0.12",
+	"pi-gpio": "0.0.8"
+  }
+}

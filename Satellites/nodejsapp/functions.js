@@ -9,7 +9,8 @@ var path = require('path'); // This package is usefull to create the mqtt topcis
 var MongoClient = require('mongodb').MongoClient;
 var exec = require('child_process').exec,
 child, child1;
-
+var sensorLib = require('node-dht-sensor');
+var gpio = require("pi-gpio"); 
 var logger = bunyan.createLogger({name:'EMProyect'});
 var prefix = global.config.node.prefix;
 var nodeID = global.config.node.nodeID;
@@ -28,6 +29,8 @@ var swapcached;
 var timestamp;
 var loadaverage;
 var cpu_usage;
+var temp;
+var hum;
 
 
 function newConection (port, host, keepalive) {
@@ -60,6 +63,7 @@ function main_callback (){
 	client.subscribe(topic_model_req);
 	client.subscribe(topic_request);
 	client.subscribe(topic_query);
+	client.subscribe(topic_ostate);
 	client.publish(topic_model, model_stg);
 	check_ram();
 	check_mem();
@@ -67,6 +71,7 @@ function main_callback (){
 	check_loadaverage();
 	check_timestamp();
 	check_cpu();
+	check_temp_hum();
 	
 	client.on('message', function (topic_aux, message) {
 		
@@ -80,7 +85,8 @@ function main_callback (){
 		var msg = JSON.parse(message.toString());		
 		if (msg.nodo == nodeID){
 			if (msg.op == "sub"){
-			client.subscribe({"Home/+/istate" : 1});
+				console.log("seleccionado");
+				client.subscribe({"Home/+/istate" : 1});
 			}
 			else{
 				if (msg.op == "unsub"){
@@ -159,6 +165,12 @@ function main_callback (){
 								case "mem":
 									var val = result[i].mem;
 									break;
+								case "temp":
+									var val = result[i].temp;
+									break;
+								case "hum":
+									var val = result[i].hum;
+									break;
 								case "swap":
 									var val = result[i].swap;
 									break;
@@ -204,7 +216,104 @@ function main_callback (){
 					});
 			}
 		}		
-		
+		if (channel == "ostate"){
+			
+			var obj = JSON.parse(message.toString());
+			var act = obj.act;
+			var val = obj.val;	
+			console.log (obj);
+			if (act == "led_rojo"){
+
+				if (val == "on"){
+					
+
+					child1 = exec("echo 17 > /sys/class/gpio/export", function (error, stdout, stderr) {
+						if (error !== null) {
+							console.log('exec error: ' + error);
+						} else {
+							
+							child1 = exec("echo out > /sys/class/gpio/gpio17/direction", function (error, stdout, stderr) {
+								if (error !== null) {
+									console.log('exec error: ' + error);
+								} else {
+									
+									child1 = exec("echo 1 > /sys/class/gpio/gpio17/value", function (error, stdout, stderr) {
+										if (error !== null) {
+											console.log('exec error: ' + error);
+										}
+									});
+								}
+							});
+
+						}
+					});
+
+				}else{
+					
+					if (val == "off"){
+						
+						child1 = exec("echo 0 > /sys/class/gpio/gpio17/value", function (error, stdout, stderr) {
+							if (error !== null) {
+								console.log('exec error: ' + error);
+							}else{
+								child1 = exec("echo 17 > /sys/class/gpio/unexport", function (error, stdout, stderr) {
+									if (error !== null) {
+										console.log('exec error: ' + error);
+									}
+								});	
+							}
+						});						
+					
+					}
+				}
+
+			}else{
+				if (act == "led_azul"){
+					if (val == "on"){
+					
+
+						child1 = exec("echo 27 > /sys/class/gpio/export", function (error, stdout, stderr) {
+							if (error !== null) {
+								console.log('exec error: ' + error);
+							} else {
+								
+								child1 = exec("echo out > /sys/class/gpio/gpio27/direction", function (error, stdout, stderr) {
+									if (error !== null) {
+										console.log('exec error: ' + error);
+									} else {
+										
+										child1 = exec("echo 1 > /sys/class/gpio/gpio27/value", function (error, stdout, stderr) {
+											if (error !== null) {
+												console.log('exec error: ' + error);
+											}
+										});
+									}
+								});
+
+							}
+						});
+
+					}else{
+					
+						if (val == "off"){
+							child1 = exec("echo 0 > /sys/class/gpio/gpio27/value", function (error, stdout, stderr) {
+								if (error !== null) {
+									console.log('exec error: ' + error);
+								}else{
+									
+									child1 = exec("echo 27 > /sys/class/gpio/unexport", function (error, stdout, stderr) {
+										if (error !== null) {
+											console.log('exec error: ' + error);
+										}
+									});
+								}
+							});
+						
+						}
+					}
+				}
+			}	
+		}
 	});
 
 }
@@ -240,6 +349,10 @@ function checkResources(){
 	var resources = '';
 	    resources = '{"timestamp":"';
 		resources = resources.concat(timestamp);
+		resources = resources.concat('","temp":"');
+		resources = resources.concat(temp);
+		resources = resources.concat('","hum":"');
+		resources = resources.concat(hum);
 		resources = resources.concat('","cpu_usage":"');
 		resources = resources.concat(cpu_usage);
 		resources = resources.concat('","mem":"');
@@ -288,7 +401,34 @@ function check_cpu (){
 	  
 	},1000);
 	
-}	
+}
+
+function check_temp_hum (){
+	
+	var sensor = {
+    initialize: function () {
+        return sensorLib.initialize(11, 4);
+    },
+    read: function () {
+        var readout = sensorLib.read();
+		temp = readout.temperature.toFixed(2);
+		hum = readout.humidity.toFixed(2);
+        setTimeout(function () {
+            sensor.read();
+        }, 1000);
+    }
+};
+ 
+if (sensor.initialize()) {
+    sensor.read();
+} else {
+    console.warn('Failed to initialize sensor');
+}
+
+	
+}
+
+
 function check_ram (){
 	var interval = setInterval (function(){
 		
@@ -371,6 +511,7 @@ global.topic_request = path.join(prefix,nodeID,'request');
 global.topic_reply = path.join(prefix,nodeID,'reply');
 global.topic_model = path.join(prefix,nodeID,'model');
 global.topic_query_reply = path.join(prefix,nodeID,'q_reply');
+global.topic_ostate = path.join(prefix,nodeID,'ostate');
 
 global.topic_id = "<";
 topic_id = topic_id.concat(nodeID);

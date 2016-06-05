@@ -20,7 +20,7 @@ var config = {
 	update_meta: 5000,
 	update_istate: 5000
   },
-  model: '{"nodo":"1","mem":"Kb","proc":"noUnit","timestamp":"s","cpu_usage":"%","swap":"Kb","loadavg":"noUnit","batt":"noUnit","power":"noUnit","freeRAM":"Kb"}',
+  model: '{"nodo":"1","mem":"Kb","proc":"noUnit","timestamp":"s","cpu_usage":"%","temp":"C","hum":"%","swap":"Kb","loadavg":"noUnit","batt":"noUnit","power":"noUnit","freeRAM":"Kb"}',
   parameters: {
 	proc: 956,
 	power: 1
