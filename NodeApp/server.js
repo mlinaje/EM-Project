@@ -19,6 +19,8 @@ var MongoClient = mongodb.MongoClient;
 //NPM Module to integrate Handlerbars UI template engine with Express
 var exphbs  = require('express-handlebars');
 
+var bodyParser = require('body-parser');
+
 // Global variables
 create_conf();
 var logger = bunyan.createLogger({name:'EMProyect'});
@@ -256,17 +258,18 @@ function realTime(node,param, responseObj){
 						"dataset":dataset,
 						"categories":timestamp
 					};
+					responseObj.json(response);
 					break;
 				}
 			}
 		}else{
 			var response = {"error":"param not available"}
+			responseObj.status(404).send('Sorry cant find that!');
 		}
 	}else{
-		var response = {"error":"node not available"}
+		responseObj.status(404).send('Sorry cant find that!');
 	}
 	nodos = [];
-	responseObj.json(response);
 }
 function getData(responseObj){
     // Get the documents collection
@@ -393,6 +396,11 @@ var app = express();
 //the default layout
 app.engine('handlebars', exphbs({defaultLayout: 'main'}));
 app.set('view engine', 'handlebars');
+// configure the app to use bodyParser()
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+app.use(bodyParser.json());
 
 //Defining middleware to serve static files
 app.use('/public', express.static('public'));
@@ -415,9 +423,17 @@ app.get("/realtime/:node/:param", function(req, res){
 	realTime(req.params.node,req.params.param,res);
 });
 
-app.get("/specific/:node/:param/:max/:min", function(req, res){
+app.get("/istate/:node/:param/:max/:min", function(req, res){
 	
 	specific(req.params.node,req.params.param,req.params.max,req.params.min,res);
+});
+
+app.put("/ostate/:node", function(req, res){
+	
+	var topic = path.join(prefix,req.params.node,'ostate');
+	var msg = JSON.stringify(req.body);
+	client.publish(topic, msg);
+	res.json({ message: 'Values updated!' });
 });
 
 app.listen("8080", function(){

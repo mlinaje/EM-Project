@@ -102,7 +102,7 @@ function realTime(node,param,operation) {
 }
 function specificQuery(node,param, max, min) {
 
-	var url_main = 'http://10.10.1.1:8080/specific/'+node +'/'+ param +'/'+max +'/'+min;
+	var url_main = 'http://10.10.1.1:8080/istate/'+node +'/'+ param +'/'+max +'/'+min;
 	
 	$(function(){
 	  $.ajax({
