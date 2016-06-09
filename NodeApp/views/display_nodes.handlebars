@@ -16,18 +16,24 @@
    <option value="1">1</option> 
    <option value="11">11</option> 
    <option value="111">111</option>
+   <option value="112">112</option>
+   <option value="113">113</option>
    <option value="12">12</option> 
    <option value="121">121</option>
+   <option value="122">122</option>
    <option value="2">2</option>
-   <option value="3">3</option> 
+   <option value="3">3</option>
+   <option value="4">4</option>
+   <option value="5">5</option>
+   <option value="6">6</option>
 </select>
 
 <select id="paramSel" hidden="hidden">
-   <option value="cpu_usage">cpu_usage</option> 
-   <option value="mem">mem</option> 
+   <option value="cpu_usage">Uso de CPU</option> 
+   <option value="mem">Disco</option> 
    <option value="swap">swap</option>
-   <option value=loadavg>loadavg</option> 
-   <option value="freeRAM">freeRAM</option> 
+   <option value=loadavg>Load average</option> 
+   <option value="freeRAM">RAM</option>
    <option value="temp">Temperatura</option>
    <option value="hum">Humedad</option>
 </select>
@@ -48,10 +54,16 @@
    <option value="1">1</option> 
    <option value="11">11</option> 
    <option value="111">111</option>
+   <option value="112">112</option>
+   <option value="113">113</option>
    <option value="12">12</option> 
    <option value="121">121</option>
+   <option value="122">122</option>
    <option value="2">2</option>
    <option value="3">3</option>
+   <option value="4">4</option>
+   <option value="5">5</option>
+   <option value="6">6</option>
 </select>
 
 <br/>
@@ -82,6 +94,52 @@
 
 	<button id="accept_q" hidden="hidden">Accept</button>
 	<button id="hide_sq" hidden="hidden">Hide</button>
+	
+<p>Click the button to change the leds.</p>
+
+<button id="leds">Change leds</button>	
+	
+<div id="div_led" hidden="hidden">
+
+<p>Select node</p><br/>
+
+<select id="node_led">
+   <option value="1">1</option> 
+   <option value="11">11</option> 
+   <option value="111">111</option>
+   <option value="112">112</option>
+   <option value="113">113</option>
+   <option value="12">12</option> 
+   <option value="121">121</option>
+   <option value="122">122</option>
+   <option value="2">2</option>
+   <option value="3">3</option>
+   <option value="4">4</option>
+   <option value="5">5</option>
+   <option value="6">6</option>
+</select>
+
+<br/>
+
+<p>Select led</p><br/>
+
+<select id="led">
+   <option value="led_azul">Led azul</option> 
+   <option value="led_rojo">Led rojo</option> 
+</select>
+
+<br/>
+
+<p>Select action</p><br/>
+
+<select id="action_led">
+   <option value="on">On</option> 
+   <option value="off">Off</option>
+</select>
+</div>
+	
+	<button id="accept_led" hidden="hidden">Accept</button>
+	<button id="hide_led" hidden="hidden">Hide</button>	
 	
 <!-- Location where the chart will be added -->
 <div id="chart-location">

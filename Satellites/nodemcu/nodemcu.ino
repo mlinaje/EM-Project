@@ -33,7 +33,7 @@ char *status_meta;
 float h;
 float t;
 String prefix = "Home";
-String nodeID = "2";
+String nodeID = "5";
 int capacity = 7753728;
 int busy = 0;
 File root_2;
@@ -51,8 +51,11 @@ void setup() {
   client.setCallback(callback);
   
   if (!SD.begin(4)) {
+     Serial.println("initialization failed!");
     return;
   }
+   Serial.println("initialization done.");
+  
    root_2 = SD.open("/");
 }
 
@@ -102,7 +105,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
     return;
     }
   if (channel == "request"){
-     client.publish("Home/2/reply",payload_char);
+     client.publish("Home/5/reply",payload_char);
      return;
   }
     if (channel == "time"){
@@ -113,7 +116,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
      return;
   }
   if (channel == "model_req"){
-     client.publish("Home/2/model","{\"nodo\":\"2\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
+     client.publish("Home/5/model","{\"nodo\":\"5\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
      return; 
   }    
   if (channel == "istate")
@@ -154,7 +157,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
       }
   }
   if (channel == "r_query"){
-    int pos = nodoTopic.indexOf("<2>");
+    int pos = nodoTopic.indexOf("<5>");
     if ( pos == -1 ){
       }else{
          StaticJsonBuffer<200> jsonBuffer3;
@@ -180,7 +183,6 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
 
         char *cstr_name = new char[filename.length()];
         strcpy(cstr_name, filename.c_str());
-
         if (SD.exists(cstr_name)) {
           Serial.println("it exists.");
            myFileRead = SD.open(cstr_name);
@@ -208,11 +210,20 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
                       msg = msg + "\"}";
                       char *cstr_msg = new char[msg.length() + 1];
                       strcpy(cstr_msg, msg.c_str());
-                      client.publish("Home/2/q_reply",cstr_msg);
+                      client.publish("Home/5/q_reply",cstr_msg);
                       delete [] cstr_msg;
 
                 }
            }
+
+            String msg = "{\"val\":\"eof\",\"node\":\"5\",\"query_id\":\"";
+            msg = msg + q_id_str;
+            msg = msg + "\"}";
+            char *cstr_msg = new char[msg.length() + 1];
+            strcpy(cstr_msg, msg.c_str());
+            client.publish("Home/5/q_reply",cstr_msg);
+            delete [] cstr_msg;
+                      
           }
           
         } else {
@@ -227,13 +238,13 @@ void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
     // Attempt to connect
-    if (client.connect("Nodo_2")) {
+    if (client.connect("Nodo_5")) {
       // ... and resubscribe
       client.subscribe("Home/nodo_central/ctrl");
-      client.subscribe("Home/2/request");
+      client.subscribe("Home/5/request");
       client.subscribe("Home/nodo_central/time");
-      client.subscribe("Home/2/model_req");
-      client.publish("Home/2/model","{\"nodo\":\"2\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
+      client.subscribe("Home/5/model_req");
+      client.publish("Home/5/model","{\"nodo\":\"5\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}");
       client.subscribe("Home/+/r_query");
     } else {
       delay(5000);
@@ -291,7 +302,7 @@ void checkData (){
 
   char *cstr = new char[msg.length() + 1];
   strcpy(cstr, msg.c_str());
-  client.publish("Home/2/istate",cstr, 1);
+  client.publish("Home/5/istate",cstr, 1);
   delete [] cstr;
 
   msg = "{\"mem\":\"";
@@ -301,9 +312,9 @@ void checkData (){
   msg = msg + "\"}";
   char *cstr_1 = new char[msg.length() + 1];
   strcpy(cstr_1, msg.c_str());
-  client.publish("Home/2/meta",cstr_1);
+  client.publish("Home/5/meta",cstr_1);
   delete [] cstr_1;
-  client.publish("Home/2/istate","{\"nodo\":\"2\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}", 1);
+  client.publish("Home/5/istate","{\"nodo\":\"5\",\"timestamp\":\"msec\",\"mem\":\"Mb\",\"temp\":\"C\",\"hum\":\"%\",\"proc\":\"noUnit\",\"batt\":\"mV\",\"power\":\"noUnit\"}", 1);
   }
 
 

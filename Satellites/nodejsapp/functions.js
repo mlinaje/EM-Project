@@ -59,6 +59,7 @@ function main_callback (){
 	client.subscribe(topic_model_req);
 	client.subscribe(topic_request);
 	client.subscribe(topic_query);
+	client.subscribe(topic_ostate);
 	client.publish(topic_model, model_stg);
 	check_mem();
 	check_ram();
@@ -79,7 +80,6 @@ function main_callback (){
 		var msg = JSON.parse(message.toString());		
 		if (msg.nodo == nodeID){
 			if (msg.op == "sub"){
-				console.log("seleccionado");
 				client.subscribe({"Home/+/istate" : 1});
 			}
 			else{
@@ -203,7 +203,48 @@ function main_callback (){
 					}
 				});
 			}
-		}		
+		}
+		
+		if (channel == "ostate"){
+			
+			var obj = JSON.parse(message.toString());
+			var act = obj.act;
+			var val = obj.val;	
+			if (act == "led_rojo"){
+
+				if (val == "on"){
+					
+
+					console.log("led rojo encendido");
+
+				}else{
+					
+					if (val == "off"){
+						
+						console.log("led rojo apagado");
+					
+					}
+				}
+
+			}else{
+				if (act == "led_azul"){
+					if (val == "on"){
+					
+
+						console.log("led azul encendido");
+
+					}else{
+					
+						if (val == "off"){
+
+							console.log("led azul apagado");
+						}
+					}
+				}
+			}	
+		
+		}
+		
 	});
 
 }
@@ -372,6 +413,7 @@ global.topic_request = path.join(prefix,nodeID,'request');
 global.topic_reply = path.join(prefix,nodeID,'reply');
 global.topic_model = path.join(prefix,nodeID,'model');
 global.topic_query_reply = path.join(prefix,nodeID,'q_reply');
+global.topic_ostate = path.join(prefix,nodeID,'ostate');
 
 global.topic_id = "<";
 topic_id = topic_id.concat(nodeID);

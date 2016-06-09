@@ -29,6 +29,7 @@ var responseArray = [];
 var NodosModel = [];
 var responses = [];
 var eof = [];
+var errors = [];
 var rtValues = [];
 var numberOfNodes = 0;
 //DB Object
@@ -108,30 +109,13 @@ function newConection (port, host, keepalive) {
 					}
 					
 			}else{
-				
-				if(responses.length == 0){
-					
-					var values = [];
-					var obj_aux = {};
-					values.push(message.toString());
-					obj_aux["q_id"] = q_id;
-					obj_aux["values"] = values;
-					responses.push(obj_aux);
-					
+				if (val === "error"){
+
+					errors.push(q_id);
+			
 				}else{
-					
-					for (var i = 0; i<responses.length; i++){ 
-						var q_id_aux = responses[i]["q_id"];
-						queries.push(q_id_aux); 
-					}
-					
-					if (queries.indexOf(q_id) != -1){
-						
-						var values_aux = responses[queries.indexOf(q_id)]["values"];
-						values_aux.push(message.toString());
-						responses[queries.indexOf(q_id)]["values"] = values_aux;
-						
-					}else{
+				
+					if(responses.length == 0){
 						
 						var values = [];
 						var obj_aux = {};
@@ -140,9 +124,32 @@ function newConection (port, host, keepalive) {
 						obj_aux["values"] = values;
 						responses.push(obj_aux);
 						
+					}else{
+						
+						for (var i = 0; i<responses.length; i++){ 
+							var q_id_aux = responses[i]["q_id"];
+							queries.push(q_id_aux); 
+						}
+						
+						if (queries.indexOf(q_id) != -1){
+							
+							var values_aux = responses[queries.indexOf(q_id)]["values"];
+							values_aux.push(message.toString());
+							responses[queries.indexOf(q_id)]["values"] = values_aux;
+							
+						}else{
+							
+							var values = [];
+							var obj_aux = {};
+							values.push(message.toString());
+							obj_aux["q_id"] = q_id;
+							obj_aux["values"] = values;
+							responses.push(obj_aux);
+							
+						}
 					}
-				}
-				queries = [];
+					queries = [];
+				}	
 			}
 		}		
 		
@@ -298,6 +305,8 @@ function getData(responseObj){
 		var valLat = docsMeta[0].lat;
 		if (_valBatt == '-1'){
 			var valBatt = "noBatt";
+		}else {
+			 var valBatt = _valBatt;
 		}
 		var unitBatt = docs[0].batt;
 		var unitMem = docs[0].mem;
@@ -384,6 +393,13 @@ function specific(node,param,max,min, responseObj){
 					clearInterval(interval);
 					break;
 				}
+			}
+		}else {
+			if(errors.indexOf(query_id.toString()) != -1){
+				
+				var response = {"error":"param not available"}
+				responseObj.status(404).send('Sorry cant find that!');
+				clearInterval(interval);
 			}
 		}
 	},20);

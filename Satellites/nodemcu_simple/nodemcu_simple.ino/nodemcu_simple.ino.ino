@@ -1,45 +1,73 @@
-#include <Ethernet.h>
+#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <SPI.h>
+
 #include "DHT.h" //cargamos la librería DHT
 #define DHTPIN 5 //Seleccionamos el pin en el que se //conectará el sensor
 #define DHTTYPE DHT11 //Se selecciona el DHT11 (hay //otros DHT)
-DHT dht(DHTPIN, DHTTYPE); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
-
-// Update these with values suitable for your network.
-byte mac[] = { 0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xED };
-IPAddress ip(192, 168, 1, 100);
-IPAddress server(192, 168, 1, 3);
-
-EthernetClient ethClient;
-PubSubClient client(ethClient);
-
+DHT dht(DHTPIN, DHTTYPE, 20); //Se inicia una variable que será usada por Arduino para comunicarse con el sensor
 
 int count = 0;
-String fixed_time;
-long local_time = 0;
-long real_time = 0;
 float h;
 float t;
+long local_time = 0;
+long real_time = 0;
+String fixed_time;
+
+const char* ssid = "My_AP";
+const char* password = "raspberry";
+
+const char* mqtt_server = "192.168.42.1";
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 void setup() {
-   pinMode(6, OUTPUT);
-   digitalWrite(6, LOW);
+  Serial.begin(115200);
+  delay(10);
+
+  // We start by connecting to a WiFi network
+
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  
+  WiFi.begin(ssid, password);
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");  
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  dht.begin(); //Se inicia el sensor
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+   pinMode(16, OUTPUT);
+   digitalWrite(16, LOW);
    pinMode(4, OUTPUT);
    digitalWrite(4, LOW);
-   dht.begin();
-  client.setServer(server, 1883);
-  client.setCallback(callback);
-  Ethernet.begin(mac, ip);
-  // Allow the hardware to sort itself out
-  delay(1500);
-  
 }
-
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    // Attempt to connect
+    if (client.connect("Nodo_6")) {
+      // ... and resubscribe
+      Serial.println("conectado....");
+      client.subscribe("Home/nodo_central/time");
+      client.subscribe("Home/6/ostate");
+    } else {
+      delay(5000);
+    }
+  }
+}
 void callback(char* topic_in, byte* payload, unsigned int length) {
-
- payload[length] = '\0';
+  payload[length] = '\0';
   String payload_str = String((char*)payload);
   char payload_char[payload_str.length()+1];
   payload_str.toCharArray (payload_char, payload_str.length()+1);
@@ -47,14 +75,15 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
   String nodoTopic = topic_str.substring(topic_str.indexOf("/") + 1 ,topic_str.lastIndexOf("/"));
   String channel = topic_str.substring(topic_str.lastIndexOf("/") + 1);
   
-   if (channel == "time"){
+
+    if (channel == "time"){
       fixed_time = payload_str.substring(0,6);
       String var_time = payload_str.substring (6);
      real_time = var_time.toInt();
      local_time = millis();
      return;
-  }    
-    if (channel == "ostate"){
+  }
+  if (channel == "ostate"){
       StaticJsonBuffer<200> jsonBuffer;
       JsonObject& root = jsonBuffer.parseObject(payload_char);
       if (!root.success()) {;
@@ -66,20 +95,24 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
       String val_str(val);
           if (act_str == "led_rojo"){
               if (val_str == "on"){
-                  digitalWrite(6, HIGH);
+                Serial.println("led rojo on");
+                  digitalWrite(16, HIGH);
               }
               else {
                 if (val_str == "off"){
-                  digitalWrite(6, LOW);
+                  Serial.println("led rojo off");
+                  digitalWrite(16, LOW);
                 }                 
               }
           }else {
             if (act_str == "led_azul"){
                if (val_str == "on"){
+                Serial.println("led azul on");
                   digitalWrite(4, HIGH);
               }
               else {
                 if (val_str == "off"){
+                  Serial.println("led azul off");
                   digitalWrite(4, LOW);
                 }                 
               }           
@@ -87,22 +120,7 @@ void callback(char* topic_in, byte* payload, unsigned int length) {
           }
      return;
   }
-
-}
-
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    // Attempt to connect
-    if (client.connect("Nodo_4")) {
-      // ... and resubscribe
-      Serial.println("conectado....");
-      client.subscribe("Home/nodo_central/time");
-      client.subscribe("Home/4/ostate");
-    } else {
-      delay(5000);
-    }
-  }
+  
 }
 
 String getTime(){
@@ -114,8 +132,8 @@ String getTime(){
  return (timestamp);
 
 }
-
 void checkData (){
+  
   h = dht.readHumidity(); //Se lee la humedad
   t = dht.readTemperature(); //Se lee la temperatura
   String msg = "{\"temp\":\"";
@@ -127,25 +145,25 @@ void checkData (){
   msg = msg + "\"}";
   char *cstr = new char[msg.length() + 1];
   strcpy(cstr, msg.c_str());
-  client.publish("Home/4/istate",cstr, 1);
+  Serial.println(cstr);
+  client.publish("Home/6/istate",cstr, 1);
   delete [] cstr;
-  client.publish("Home/4/istate","{\"nodo\":\"4\",\"timestamp\":\"msec\",\"temp\":\"C\",\"hum\":\"%\"}", 1); 
-  }
+  client.publish("Home/6/istate","{\"nodo\":\"6\",\"timestamp\":\"msec\",\"temp\":\"C\",\"hum\":\"%\"}", 1); 
+}
 
-  
+
 void loop() {
-
   if (!client.connected()) {
     reconnect();
   }
   client.loop();
-
- if (count == 9999){
+  if (count == 100000){
   checkData ();
   count = 0;
   }
 
   count = count + 1;
-   delay (1);
- 
+   delay (0);
+  
 }
+

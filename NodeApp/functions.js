@@ -388,10 +388,16 @@ function getModel_Meta (){
 				   
 				  } else {
 					console.log('No document(s) found with defined "find" criteria!');
+					var topic = 'Home/'; // topic is created with the node name
+					topic = topic.concat(nodo_src);
+					topic = topic.concat('/response');
+					var msg_eoq = '{"val" : "error",  "query_id" : "'+query_id+'"}';
+					client.publish(topic,msg_eoq);
 				  }
 				  
 				 // Close connection
 				  db.close();
+				  console.log(Queries);
 				});
 			  }
 			});
@@ -472,7 +478,7 @@ function getModel_Meta (){
 						});
 					  }
 					});
-					cleanUp(q_id);	
+					//cleanUp(q_id);	
 				}
 			
 			}

@@ -1,13 +1,14 @@
 var ip = "192.168.1.3";
 var port = "8080";
-
+var interval_nodes;
+var interval_real_time;
 function displayNodes(operation) {
-	var interval;
+	;
 	if (operation == "start"){
 		$(function(){
 			$('#dynamictable').append('<table id="myTable"></table>');
 			var table = $('#dynamictable').children();
-			interval = setInterval(function() {
+			interval_nodes = setInterval(function() {
 				  $.ajax({
 					url: 'http://'+ip+':'+port+'/nodes',
 					type: 'GET',
@@ -37,12 +38,11 @@ function displayNodes(operation) {
 			},500); 
 		});
 	}else{
-		clearInterval(interval);
-		document.getElementById("myTable").remove();
+		clearInterval(interval_nodes);
+		document.getElementById("myTable").innerHTML = "";
 	}
 }
 function realTime(node,param,operation) {
-	var interval;
 	if (operation == "start"){
 		var url_req = 'http://'+ip+':'+port+'/realtimereq/'+node;
 		var url_main = 'http://'+ip+':'+port+'/realtime/'+node +'/'+ param;
@@ -59,7 +59,7 @@ function realTime(node,param,operation) {
 		});
 		
 		if(flag = "ok"){	
-			interval = setInterval(function() {
+			interval_real_time = setInterval(function() {
 				$(function(){
 				  $.ajax({
 					url: url_main,
@@ -69,9 +69,16 @@ function realTime(node,param,operation) {
 							console.log("error");
 						}else{
 							var chartProperties = {
-								"caption": "Node 1 CPU usage",
+								"caption": node,
 								"xAxisName": "timestamp",
-								"yAxisName": "CPU usage"
+								"labelDisplay": "rotate",
+								"yAxisName": param,
+								"showValues": "1",
+								"lineThickness": "5",
+								"theme": "fint",
+								"divLineDashed": "1",
+								"divLineDashLen": "5",
+								"divLineDashGap": "6"
 							  };
 
 							  var categoriesArray = [{
@@ -98,8 +105,9 @@ function realTime(node,param,operation) {
 		}
 
 	}else{
-		clearInterval(interval);
-		document.getElementById("chart-location").remove();
+		clearInterval(interval_real_time);
+		//document.getElementById("chart-location").remove();
+		document.getElementById("chart-location").innerHTML = "";
 	}
 
 }
@@ -115,10 +123,18 @@ function specificQuery(node,param, max, min) {
 			if (data.error != undefined){
 				console.log("error");
 			}else{
+				
 				var chartProperties = {
-					"caption": "Node 1 CPU usage",
+					"caption": node,
 					"xAxisName": "timestamp",
-					"yAxisName": "CPU usage"
+					"labelDisplay": "rotate",
+					"yAxisName": param,
+					"showValues": "0",
+					"lineThickness": "5",
+					"theme": "fint",
+					"divLineDashed": "1",
+					"divLineDashLen": "5",
+					"divLineDashGap": "6"
 				  };
 
 				  var categoriesArray = [{
@@ -142,6 +158,28 @@ function specificQuery(node,param, max, min) {
 	  });
 	});	
 }
+	
+function changeLed(node,led,action){
+	var  url_led = 'http://'+ip+':'+port+'/ostate/'+node;
+	var data = "{\n      \"act\": \""+led+"\", \"val\": \""+action+"\"\n}";
+	var settings = {
+	  "async": true,
+	  "crossDomain": true,
+	  "url": url_led,
+	  "method": "PUT",
+	  "headers": {
+		"content-type": "application/json",
+		"cache-control": "no-cache",
+	  },
+	  "processData": false,
+	  "data": "{\n      \"act\": \""+led+"\", \"val\": \""+action+"\"\n}"
+	}
+
+	$.ajax(settings).done(function (response) {
+		alert("Done!!");
+	  console.log(response);
+	});
+}	
 	
 $(document).ready(function(){
     $("#show").click(function(){
@@ -203,6 +241,29 @@ $(document).ready(function(){
 		$("#hide_sq").hide();
 		document.getElementById("chart-location").remove();
     });
+	
+	$("#leds").click(function(){
+		$("#div_led").show();
+		$("#accept_led").show();
+		$("#hide_led").show();
+		$("#leds").hide();
+    });
+	
+	$("#accept_led").click(function(){
+		$("#div_led").show();
+		var node = document.getElementById("node_led").value;
+		var led = document.getElementById("led").value;
+		var action = document.getElementById("action_led").value;
+		changeLed(node,led,action);
+    });
+	
+	$("#hide_led").click(function(){
+		$("#div_led").hide();
+		$("#accept_led").hide();
+		$("#hide_led").hide();
+		$("#leds").show();
+    });
+	
 	
 });
 
