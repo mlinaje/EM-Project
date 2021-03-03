@@ -1,2 +1,6 @@
-# EM-Project
-EM-Project is a Democratic and Distributed Data Storage platform in Sensor Networks. It is part of Alfonos Galan's End Master Project.
+# FairS4U (Fair Storage for Ubiquitous Computing)
+The aim of this fork is to extend the original contributions made in the original Alfonos Galan's Project. 
+
+The objective is to get a fair (regarding computing and storage capabilities, but also power consumption and other sensor node features) Distributed Data Storage with replicas using the sensor/actuator nodes already available in the sensor network.
+
+This will provide several advantages, as we fully explain in this paper (free download): https://ieeexplore.ieee.org/document/8819993
